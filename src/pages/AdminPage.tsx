@@ -9,13 +9,13 @@ import { workCategories } from "../data/workCategories";
 import type { DuplicateReview, ImportBatchProgress, ImportEntryProgress, ZipEntryMeta } from "../types/imports";
 import type { PortfolioImage, PortfolioStatus, TestimonialRecord } from "../types/portfolio";
 
-type AdminTab = "images" | "upload" | "duplicates" | "testimonials";
+type AdminTab = "images" | "review" | "upload" | "duplicates" | "testimonials";
 type DuplicateAction = "keep-existing-only" | "keep-new-only" | "keep-both" | "use-existing-in-category";
 type UploadResponse = { outcome: "uploaded" | "duplicate"; review?: DuplicateReview };
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_SOURCE_RECORD_BYTES = 512 * 1024;
-const tabs: Array<[AdminTab, string]> = [["images", "Images"], ["upload", "Upload Images"], ["duplicates", "Duplicate Review"], ["testimonials", "Testimonials"]];
+const tabs: Array<[AdminTab, string]> = [["images", "Images"], ["review", "Review Archive"], ["upload", "Upload Images"], ["duplicates", "Duplicate Review"], ["testimonials", "Testimonials"]];
 
 const developmentDuplicateReviews: DuplicateReview[] = [
   {
@@ -83,6 +83,7 @@ export default function AdminPage() {
   const [selectedCategory, setSelectedCategory] = useState("vehicle-wraps-fleet-graphics");
   const [autoAdvance, setAutoAdvance] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [reviewIndex, setReviewIndex] = useState(0);
   const [notice, setNotice] = useState("");
   const queueRef = useRef<ImportBatchProgress[]>([]);
   const processingRef = useRef(false);
@@ -103,6 +104,8 @@ export default function AdminPage() {
   }, []);
 
   const filteredImages = useMemo(() => images.filter((image) => (categoryFilter === "all" || image.categoryId === categoryFilter) && (statusFilter === "all" || image.status === statusFilter)), [categoryFilter, images, statusFilter]);
+  const archiveImages = useMemo(() => images.filter((image) => image.status === "archive").sort((first, second) => first.filename.localeCompare(second.filename)), [images]);
+  const reviewImage = archiveImages[Math.min(reviewIndex, Math.max(0, archiveImages.length - 1))];
   const overall = useMemo(() => {
     const imageEntries = zipQueue.flatMap((item) => item.entries).filter((entry) => entry.kind === "image");
     const complete = imageEntries.filter((entry) => ["uploaded", "duplicate", "skipped"].includes(entry.status)).length;
@@ -123,6 +126,19 @@ export default function AdminPage() {
       const entries = item.entries.map((entry) => entry.path === path ? { ...entry, ...patch } : entry);
       return { ...item, entries, ...queueCounts(entries) };
     });
+  }
+
+  async function refreshRemoteImages() {
+    if (!remoteReady) return;
+    try {
+      const response = await fetch("/api/admin/portfolio");
+      if (!response.ok) return;
+      const payload = await response.json();
+      setImages(payload.images);
+    } catch {
+      // The completed-import queue remains useful even if its final refresh
+      // is briefly interrupted. The next admin load will retry normally.
+    }
   }
 
   async function saveImage(id: string, patch: Partial<PortfolioImage>) {
@@ -157,10 +173,11 @@ export default function AdminPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(savedPatch),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error ?? "This image could not be saved.");
-      applyPatch();
-      setNotice("Image saved.");
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error ?? "This image could not be saved.");
+    applyPatch();
+    const publishedCount = Number(payload.publishedFamilyCount ?? 0);
+    setNotice(publishedCount > 1 ? `Image saved. ${publishedCount} images from this project are now visible.` : "Image saved.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "This image could not be saved.");
     }
@@ -322,6 +339,7 @@ export default function AdminPage() {
         const counts = queueCounts(latest.entries);
         updateQueueItem(clientId, (current) => ({ ...current, status: counts.failed || counts.duplicates ? "partially-completed" : "completed", currentFilename: undefined }));
         await recordBatchAction(item.batchId, "finalize");
+        await refreshRemoteImages();
       }
     } catch (error) {
       updateQueueItem(clientId, (current) => ({ ...current, status: "failed", message: error instanceof Error ? error.message : "ZIP could not be opened." }));
@@ -388,6 +406,37 @@ export default function AdminPage() {
   function handleDrop(event: DragEvent<HTMLLabelElement>) {
     event.preventDefault();
     addFiles(Array.from(event.dataTransfer.files));
+  }
+
+  if (tab === "review") {
+    const currentPosition = archiveImages.length ? Math.min(reviewIndex, archiveImages.length - 1) + 1 : 0;
+    return (
+      <main className="min-h-screen bg-ink px-5 py-8 sm:px-8 lg:py-12">
+        <div className="mx-auto max-w-[1000px]">
+          <div className="flex flex-wrap items-center justify-between gap-5 border-b border-line pb-6">
+            <a href="/" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange"><ArrowLeft size={16} aria-hidden="true" /> Return Home</a>
+            <span className="text-xs font-bold uppercase tracking-[0.18em] text-orange">Private MTD portfolio manager</span>
+          </div>
+          <header className="mt-12"><h1 className="font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">Portfolio Admin</h1></header>
+          <nav className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-b border-line pb-4" aria-label="Admin sections">
+            {tabs.map(([id, label]) => <button type="button" key={id} onClick={() => setTab(id)} className={`text-sm font-bold uppercase tracking-wide ${tab === id ? "text-orange" : "text-bone/60 hover:text-bone"}`}>{label}</button>)}
+          </nav>
+          {notice && <p className="mt-5 border border-line bg-charcoal2 px-4 py-3 text-sm text-bone/75">{notice}</p>}
+          <section className="mt-10">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange">Archive review</p>
+            <h2 className="mt-3 font-display text-4xl font-semibold uppercase leading-[0.9] text-bone sm:text-5xl">Choose what leads.</h2>
+            <p className="mt-4 max-w-2xl text-bone/65">Every normal upload is automatically placed in Archive and appears in More Work. Review them here one at a time, then promote only the images that should lead a category.</p>
+            {!reviewImage ? <p className="mt-8 border border-line p-5 text-sm text-bone/60">There are no Archive images to review yet.</p> : <article className="mt-8 overflow-hidden border border-line bg-charcoal2">
+              <img src={reviewImage.imageUrl} alt={reviewImage.altText} className="aspect-[4/3] w-full object-contain bg-ink" />
+              <div className="space-y-5 p-5 sm:p-7">
+                <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">{shortCategory(reviewImage.categoryId)} Â· Archive</p><p className="mt-2 break-words text-sm text-bone/70">{reviewImage.filename}</p><p className="mt-1 text-xs text-bone/45">Image {currentPosition} of {archiveImages.length}{reviewImage.isHidden ? " Â· held for duplicate review" : ""}</p></div><div className="flex gap-2"><button type="button" disabled={currentPosition <= 1} onClick={() => setReviewIndex((index) => Math.max(0, index - 1))} className="border border-line px-3 py-2 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Previous</button><button type="button" disabled={currentPosition >= archiveImages.length} onClick={() => setReviewIndex((index) => Math.min(archiveImages.length - 1, index + 1))} className="border border-line px-3 py-2 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Next</button></div></div>
+                <div className="flex flex-wrap gap-3"><button type="button" onClick={() => saveImage(reviewImage.id, { status: "featured" })} className="bg-orange px-4 py-3 text-xs font-bold uppercase text-ink">Promote to Featured</button><button type="button" onClick={() => saveImage(reviewImage.id, { isCategoryCover: true, status: "featured" })} className="border border-line px-4 py-3 text-xs font-bold uppercase text-bone hover:border-orange">Make Category Cover</button><button type="button" onClick={() => saveImage(reviewImage.id, { isHidden: !reviewImage.isHidden })} className="border border-line px-4 py-3 text-xs font-bold uppercase text-bone hover:border-orange">{reviewImage.isHidden ? "Make visible" : "Hide"}</button></div>
+              </div>
+            </article>}
+          </section>
+        </div>
+      </main>
+    );
   }
 
   return (
