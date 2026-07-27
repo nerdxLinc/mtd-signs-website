@@ -15,7 +15,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   if (email instanceof Response) return email;
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return json({ error: "Missing image id" }, { status: 400 });
-  const current: any = await env.DB.prepare("SELECT category_id FROM portfolio_images WHERE id = ?").bind(id).first();
+  const current: any = await env.DB.prepare("SELECT id, category_id, project_key, project_label, source_filename FROM portfolio_images WHERE id = ?").bind(id).first();
   if (!current) return json({ error: "Image not found" }, { status: 404 });
   const body = await request.json() as Record<string, unknown>;
   const keys = Object.keys(body).filter((key) => editable.has(key));
@@ -41,8 +41,27 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   }
   if (!fields.length) return json({ error: "Invalid values supplied" }, { status: 400 });
   fields.push("updated_at = CURRENT_TIMESTAMP");
-  await env.DB.prepare(`UPDATE portfolio_images SET ${fields.join(", ")} WHERE id = ?`).bind(...values, id).run();
-  return json({ ok: true, savedBy: email });
+  const statements = [env.DB.prepare(`UPDATE portfolio_images SET ${fields.join(", ")} WHERE id = ?`).bind(...values, id)];
+
+  // Promoting one image should make the whole client project available to
+  // browse. Related images retain their existing Featured/Archive placement;
+  // only the selected image is promoted. This keeps Featured Work curated
+  // while the project gallery can show the complete body of work.
+  const isPublishing = body.status === "featured" || body.isCategoryCover === true;
+  const project = projectFromRow(current);
+  let publishedFamilyCount = 0;
+  if (isPublishing && project.key) {
+    const familyRows = await env.DB.prepare("SELECT id, project_key, project_label, source_filename FROM portfolio_images").all<any>();
+    const familyIds = familyRows.results
+      .filter((row) => projectFromRow(row).key === project.key)
+      .map((row) => String(row.id));
+    publishedFamilyCount = familyIds.length;
+    for (const familyId of familyIds) {
+      statements.push(env.DB.prepare("UPDATE portfolio_images SET is_hidden = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(familyId));
+    }
+  }
+  await env.DB.batch(statements);
+  return json({ ok: true, savedBy: email, publishedFamilyCount });
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
