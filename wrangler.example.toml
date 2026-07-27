@@ -1,0 +1,12 @@
+name = "REPLACE_WITH_YOUR_CLOUDFLARE_PAGES_PROJECT"
+compatibility_date = "2026-07-26"
+pages_build_output_dir = "./dist"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "REPLACE_WITH_YOUR_D1_DATABASE_NAME"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "PORTFOLIO_BUCKET"
+bucket_name = "REPLACE_WITH_YOUR_R2_BUCKET_NAME"
