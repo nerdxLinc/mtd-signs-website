@@ -39,10 +39,12 @@ export async function upsertImportItem(env: Env, values: { importId: string; sou
   return String(row?.id ?? id);
 }
 
-export async function insertPortfolioImage(env: Env, values: { id?: string; categoryId: string; filename: string; sourceZip: string; contentType: string; hash: string; size: number; width: number | null; height: number | null; importId: string; r2Key: string }) {
+export async function insertPortfolioImage(env: Env, values: { id?: string; categoryId: string; filename: string; sourceZip: string; contentType: string; hash: string; size: number; width: number | null; height: number | null; importId: string; r2Key: string; hidden?: boolean }) {
   const id = values.id ?? crypto.randomUUID();
   const project = projectFamilyFromFilename(values.filename);
-  await env.DB.prepare("INSERT INTO portfolio_images (id, category_id, status, display_rank, is_category_cover, is_hidden, r2_key, source_filename, source_zip, content_type, content_hash, source_size, width, height, alt_text, import_id, project_key, project_label) VALUES (?, ?, 'archive', 100, 0, 1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(id, values.categoryId, values.r2Key, values.filename, values.sourceZip, values.contentType, values.hash, values.size, values.width, values.height, values.filename.replace(/[-_]+/g, " ").replace(/\.[^.]+$/, ""), values.importId, project?.key ?? null, project?.label ?? null).run();
+  // Normal imports are immediately available in More Work. A potential
+  // duplicate is the one exception: it remains hidden until reviewed.
+  await env.DB.prepare("INSERT INTO portfolio_images (id, category_id, status, display_rank, is_category_cover, is_hidden, r2_key, source_filename, source_zip, content_type, content_hash, source_size, width, height, alt_text, import_id, project_key, project_label) VALUES (?, ?, 'archive', 100, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(id, values.categoryId, values.hidden ? 1 : 0, values.r2Key, values.filename, values.sourceZip, values.contentType, values.hash, values.size, values.width, values.height, values.filename.replace(/[-_]+/g, " ").replace(/\.[^.]+$/, ""), values.importId, project?.key ?? null, project?.label ?? null).run();
   return id;
 }
 
@@ -65,3 +67,4 @@ export async function imageUploadDetails(file: File) {
 export function toDuplicateImage(row: any) {
   return { id: row.id, filename: row.source_filename, sourceZip: row.source_zip ?? undefined, width: row.width, height: row.height, size: row.source_size, imageUrl: adminImageUrl(row.id) };
 }
+
