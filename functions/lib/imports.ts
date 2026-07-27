@@ -7,11 +7,14 @@ const categoryIds = new Set(["vehicle-wraps-fleet-graphics", "logo-identity-desi
 export function suggestedCategory(filename: string, fallback: string) {
   const name = filename.toLowerCase();
   if (/(fire|police|sheriff|ems|rescue|public-safety)/.test(name)) return "public-safety-graphics";
-  if (/(church|ministry|worship|baptist|fellowship)/.test(name)) return "church-ministry-graphics";
-  if (/(logo|identity|brand-mark|wordmark)/.test(name)) return "logo-identity-design";
+  if (/(church|ministry|worship|baptist|fellowship|assembly|disciples|chapel|parish|congregation)/.test(name)) return "church-ministry-graphics";
+  if (/(logo|identity|brand-mark|brandmark|wordmark|letterhead|business-card)/.test(name)) return "logo-identity-design";
   if (/(truck|van|trailer|vehicle|fleet|wrap|passenger-side|driver-side|rear-angle)/.test(name)) return "vehicle-wraps-fleet-graphics";
-  if (/(sign|pylon|monument|window|wall|display)/.test(name)) return "commercial-branding";
-  return categoryIds.has(fallback) ? fallback : "specialty-projects";
+  if (/(sign|signage|pylon|monument|window|wall|display|wayfinding|storefront|awning|cabinet)/.test(name)) return "commercial-branding";
+  // An uncertain name must never silently become a Vehicle Wrap. The importer
+  // sends it to Specialty Projects, where it remains visible for a quick
+  // owner correction instead of appearing in the wrong public category.
+  return fallback === "vehicle-wraps-fleet-graphics" || !categoryIds.has(fallback) ? "specialty-projects" : fallback;
 }
 
 export function safeFilename(filename: string) {
