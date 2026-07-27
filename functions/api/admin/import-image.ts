@@ -53,7 +53,10 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const id = crypto.randomUUID();
   const r2Key = `portfolio/${id}/${safeFilename(sourceFilename)}`;
   await env.PORTFOLIO_BUCKET.put(r2Key, bytes, { httpMetadata: { contentType } });
-  await insertPortfolioImage(env, { id, categoryId, filename: sourceFilename, sourceZip, contentType, hash, size: file.size, width: dimensions.width, height: dimensions.height, importId: batchId, r2Key, hidden: potential.length > 0 });
+  // Archive is the automatic destination for every upload. Duplicate review
+  // can still flag possible matches, but it does not suppress the owner's
+  // work from the Archive.
+  await insertPortfolioImage(env, { id, categoryId, filename: sourceFilename, sourceZip, contentType, hash, size: file.size, width: dimensions.width, height: dimensions.height, importId: batchId, r2Key });
   const itemId = await upsertImportItem(env, { importId: batchId, sourceFilename, status: potential.length ? "duplicate" : "uploaded", hash, size: file.size, width: dimensions.width, height: dimensions.height, imageId: id, duplicateKind: potential.length ? "potential" : null });
 
   if (potential.length) {
