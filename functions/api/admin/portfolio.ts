@@ -15,6 +15,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   if (email instanceof Response) return email;
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return json({ error: "Missing image id" }, { status: 400 });
+  const current: any = await env.DB.prepare("SELECT category_id FROM portfolio_images WHERE id = ?").bind(id).first();
+  if (!current) return json({ error: "Image not found" }, { status: 404 });
   const body = await request.json() as Record<string, unknown>;
   const keys = Object.keys(body).filter((key) => editable.has(key));
   if (!keys.length) return json({ error: "No editable values supplied" }, { status: 400 });
@@ -31,10 +33,11 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
     values.push(project?.key ?? null, project?.label ?? null);
   }
   if (body.isCategoryCover === true) {
-    const current: any = await env.DB.prepare("SELECT category_id FROM portfolio_images WHERE id = ?").bind(id).first();
     const categoryId = String(body.categoryId ?? current?.category_id ?? "");
     await env.DB.prepare("UPDATE portfolio_images SET is_category_cover = 0 WHERE category_id = ?").bind(categoryId).run();
-    fields.push("is_category_cover = 1", "status = 'featured'");
+    // A cover must be visible to the public gallery. Imported images start
+    // hidden for review, so setting a cover intentionally publishes it.
+    fields.push("is_category_cover = 1", "status = 'featured'", "is_hidden = 0");
   }
   if (!fields.length) return json({ error: "Invalid values supplied" }, { status: 400 });
   fields.push("updated_at = CURRENT_TIMESTAMP");
@@ -54,3 +57,4 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   await env.PORTFOLIO_BUCKET.delete(row.r2_key);
   return json({ ok: true, deletedBy: email });
 };
+
