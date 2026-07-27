@@ -1,4 +1,5 @@
 import { adminImageUrl, json, requireAdmin, type Env } from "../../lib/access";
+import { suggestedCategory } from "../../lib/imports";
 import { projectFamilyFromLabel, projectFromRow } from "../../lib/projects";
 
 const editable = new Set(["categoryId", "status", "rank", "isCategoryCover", "isHidden", "altText", "projectLabel"]);
@@ -6,6 +7,23 @@ const editable = new Set(["categoryId", "status", "rank", "isCategoryCover", "is
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const auth = requireAdmin(request);
   if (auth instanceof Response) return auth;
+
+  // The initial database schema held every new Archive image for manual
+  // approval. Archive is now automatic. Release the previously imported
+  // Archive items when Admin opens, while keeping an explicit owner Hide
+  // action distinct (it uses the value 2 below).
+  await env.DB.prepare("UPDATE portfolio_images SET is_hidden = 0, updated_at = CURRENT_TIMESTAMP WHERE status = 'archive' AND is_hidden = 1").run();
+
+  // Earlier imports used Vehicle Wraps as the silent catch-all category.
+  // Re-run deterministic filename classification for those legacy records.
+  const legacyRows = await env.DB.prepare("SELECT id, category_id, source_filename FROM portfolio_images WHERE category_id = 'vehicle-wraps-fleet-graphics'").all<any>();
+  const reclassifications = legacyRows.results
+    .map((row) => ({ id: String(row.id), categoryId: suggestedCategory(String(row.source_filename ?? ""), "vehicle-wraps-fleet-graphics") }))
+    .filter((row) => row.categoryId !== "vehicle-wraps-fleet-graphics");
+  if (reclassifications.length) {
+    await env.DB.batch(reclassifications.map((row) => env.DB.prepare("UPDATE portfolio_images SET category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(row.categoryId, row.id)));
+  }
+
   const result = await env.DB.prepare("SELECT id, category_id, status, display_rank, is_category_cover, is_hidden, source_filename, source_zip, alt_text, project_key, project_label FROM portfolio_images ORDER BY category_id, status, display_rank ASC").all();
   return json({ images: result.results.map((row: any) => { const project = projectFromRow(row); return { id: row.id, categoryId: row.category_id, status: row.status, rank: row.display_rank, isCategoryCover: Boolean(row.is_category_cover), isHidden: Boolean(row.is_hidden), imageUrl: adminImageUrl(row.id), altText: row.alt_text, filename: row.source_filename, sourceZip: row.source_zip, projectKey: project.key, projectLabel: project.label }; }) });
 };
@@ -25,7 +43,9 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   if (keys.includes("categoryId")) { fields.push("category_id = ?"); values.push(body.categoryId); }
   if (keys.includes("status") && (body.status === "featured" || body.status === "archive")) { fields.push("status = ?"); values.push(body.status); }
   if (keys.includes("rank") && Number.isFinite(body.rank)) { fields.push("display_rank = ?"); values.push(Number(body.rank)); }
-  if (keys.includes("isHidden")) { fields.push("is_hidden = ?"); values.push(body.isHidden ? 1 : 0); }
+  // 1 is a legacy pending-archive value which is released by the recovery
+  // step above. 2 is an explicit owner hide and remains private.
+  if (keys.includes("isHidden")) { fields.push("is_hidden = ?"); values.push(body.isHidden ? 2 : 0); }
   if (keys.includes("altText")) { fields.push("alt_text = ?"); values.push(String(body.altText)); }
   if (keys.includes("projectLabel")) {
     const project = projectFamilyFromLabel(String(body.projectLabel ?? ""));
@@ -50,6 +70,17 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   const isPublishing = body.status === "featured" || body.isCategoryCover === true;
   const project = projectFromRow(current);
   let publishedFamilyCount = 0;
+  let recategorizedFamilyCount = 0;
+  if (keys.includes("categoryId") && typeof body.categoryId === "string" && project.key) {
+    const familyRows = await env.DB.prepare("SELECT id, project_key, project_label, source_filename FROM portfolio_images").all<any>();
+    const familyIds = familyRows.results
+      .filter((row) => projectFromRow(row).key === project.key)
+      .map((row) => String(row.id));
+    recategorizedFamilyCount = familyIds.length;
+    for (const familyId of familyIds) {
+      statements.push(env.DB.prepare("UPDATE portfolio_images SET category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(body.categoryId, familyId));
+    }
+  }
   if (isPublishing && project.key) {
     const familyRows = await env.DB.prepare("SELECT id, project_key, project_label, source_filename FROM portfolio_images").all<any>();
     const familyIds = familyRows.results
@@ -61,7 +92,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
     }
   }
   await env.DB.batch(statements);
-  return json({ ok: true, savedBy: email, publishedFamilyCount });
+  return json({ ok: true, savedBy: email, publishedFamilyCount, recategorizedFamilyCount });
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
