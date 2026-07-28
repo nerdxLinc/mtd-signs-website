@@ -26,6 +26,39 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+.language-toggle {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(242, 240, 236, 0.28);
+  background: rgba(10, 10, 10, 0.82);
+  padding: 0.35rem 0.5rem;
+  color: rgba(242, 240, 236, 0.64);
+  font-family: "Inter", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+}
+
+.language-toggle button {
+  min-height: 2rem;
+  border: 0;
+  background: transparent;
+  padding: 0.2rem;
+  color: inherit;
+}
+
+.language-toggle button:hover,
+.language-toggle button.is-active {
+  color: #ff6d01;
+}
+
 ::selection {
   @apply bg-orange text-ink;
 }
