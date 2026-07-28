@@ -100,6 +100,7 @@ export default function Contact() {
             <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-4" aria-busy={status === "sending"}>
               <input
                 name="name"
+                aria-label={t("name")}
                 autoComplete="name"
                 required
                 type="text"
@@ -108,6 +109,7 @@ export default function Contact() {
               />
               <input
                 name="email"
+                aria-label={t("email")}
                 autoComplete="email"
                 required
                 type="email"
@@ -116,6 +118,7 @@ export default function Contact() {
               />
               <input
                 name="phone"
+                aria-label={t("phone")}
                 autoComplete="tel"
                 type="tel"
                 placeholder={t("phone")}
@@ -123,6 +126,7 @@ export default function Contact() {
               />
               <textarea
                 name="projectDetails"
+                aria-label={t("projectDetails")}
                 placeholder={t("projectDetails")}
                 rows={4}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors sm:row-span-2"

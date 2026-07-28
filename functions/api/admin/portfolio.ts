@@ -1,5 +1,4 @@
 import { adminImageUrl, json, requireAdmin, type Env } from "../../lib/access";
-import { recoverLegacyPortfolio } from "../../lib/portfolioRecovery";
 import { projectFamiliesForRows, projectFamilyFromLabel, projectFromRow } from "../../lib/projects";
 
 const editable = new Set(["categoryId", "status", "rank", "isCategoryCover", "isHidden", "altText", "projectLabel"]);
@@ -7,8 +6,6 @@ const editable = new Set(["categoryId", "status", "rank", "isCategoryCover", "is
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const auth = requireAdmin(request);
   if (auth instanceof Response) return auth;
-
-  await recoverLegacyPortfolio(env);
 
   const result = await env.DB.prepare("SELECT id, category_id, status, display_rank, is_category_cover, is_hidden, source_filename, source_zip, alt_text, project_key, project_label FROM portfolio_images ORDER BY category_id, status, display_rank ASC").all();
   const families = projectFamiliesForRows(result.results);

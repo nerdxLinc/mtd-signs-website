@@ -93,76 +93,51 @@ type ProjectFamily = { key?: string; label?: string };
  */
 export function projectFamiliesForRows(rows: any[]) {
   const assignments = new Map<string, ProjectFamily>();
-  const familyWords = rows.map((row) => familyWordsFromFilename(String(row.source_filename ?? "")));
-  const parents = rows.map((_, index) => index);
-  const find = (index: number): number => {
-    if (parents[index] !== index) parents[index] = find(parents[index]);
-    return parents[index];
-  };
-  const join = (first: number, second: number) => {
-    const firstParent = find(first); const secondParent = find(second);
-    if (firstParent !== secondParent) parents[secondParent] = firstParent;
-  };
+  const candidates = rows.map((row) => {
+    const words = familyWordsFromFilename(String(row.source_filename ?? ""));
+    const resolved = projectFromRow(row);
+    return { id: String(row.id), words, key: resolved.key, label: resolved.label };
+  });
+  const unique = [...new Map(candidates
+    .filter((candidate): candidate is typeof candidate & { key: string; label: string } => Boolean(candidate.key && candidate.label))
+    .map((candidate) => [candidate.key, candidate])).values()]
+    .sort((first, second) => first.key.length - second.key.length);
+  const canonicalByKey = new Map<string, ProjectFamily>();
 
-  for (let first = 0; first < rows.length; first += 1) {
-    for (let second = first + 1; second < rows.length; second += 1) {
-      // A two-word shared prefix is deliberate: it handles meaningful client
-      // names such as Taco Local and Good Earth without grouping generic
-      // single words such as "sign" or "truck".
-      if (commonPrefixLength(familyWords[first], familyWords[second]) >= 2) {
-        join(first, second);
-        continue;
-      }
-
-      // Some client names arrive without separators (TacoLocal) while other
-      // images use spaces, hyphens, or an added deliverable word
-      // (Taco Local Design). Treat a complete compact client name contained
-      // in the other filename as the same family. This follows the owner's
-      // rule that the same principal name should group together regardless
-      // of punctuation; a deliberate project-label edit remains available
-      // in Admin to correct a rare false positive.
-      const firstKey = compactFamilyKey(familyWords[first]);
-      const secondKey = compactFamilyKey(familyWords[second]);
-      const sharedPrincipalName = firstKey.length >= 4 && secondKey.length >= 4
-        && (firstKey.includes(secondKey) || secondKey.includes(firstKey));
-      if (sharedPrincipalName) join(first, second);
-    }
+  // Resolve separator variations and complete contained principal names once
+  // per unique project key. This replaces the former row-by-row comparison,
+  // which became too expensive as the portfolio grew.
+  for (const candidate of unique) {
+    const parent = unique.find((possible) =>
+      possible.key !== candidate.key
+      && possible.words.length >= 2
+      && candidate.key.includes(possible.key));
+    canonicalByKey.set(candidate.key, parent
+      ? { key: parent.key, label: parent.label }
+      : { key: candidate.key, label: candidate.label });
   }
 
-  const groups = new Map<number, number[]>();
-  rows.forEach((_, index) => {
-    const root = find(index);
-    groups.set(root, [...(groups.get(root) ?? []), index]);
-  });
+  // Preserve the established two-word family rule for names such as
+  // Taco Local and Good Earth without treating generic one-word matches as
+  // families. Only prefixes actually shared by more than one distinct key
+  // alter the canonical assignment.
+  const prefixGroups = new Map<string, typeof candidates>();
+  for (const candidate of candidates) {
+    if (candidate.words.length < 2 || !candidate.key) continue;
+    const prefix = compactFamilyKey(candidate.words.slice(0, 2));
+    prefixGroups.set(prefix, [...(prefixGroups.get(prefix) ?? []), candidate]);
+  }
+  for (const group of prefixGroups.values()) {
+    const keys = new Set(group.map((candidate) => candidate.key).filter(Boolean));
+    if (keys.size < 2) continue;
+    const label = labelFromWords(group[0].words.slice(0, 2));
+    const project = { key: normalizeProjectKey(label), label };
+    for (const key of keys) canonicalByKey.set(String(key), project);
+  }
 
-  for (const indexes of groups.values()) {
-    let common = familyWords[indexes[0]] ?? [];
-    for (const index of indexes.slice(1)) common = common.slice(0, commonPrefixLength(common, familyWords[index]));
-    const storedFamilies = indexes
-      .map((index) => {
-        const key = rows[index].project_key ? String(rows[index].project_key) : undefined;
-        const label = rows[index].project_label ? String(rows[index].project_label) : undefined;
-        // Ignore the earlier "renamed/client" path value; projectFromRow
-        // already knows when it is legacy import metadata rather than a
-        // deliberate owner-provided project name.
-        const resolved = projectFromRow(rows[index]);
-        return key && label && resolved.key === key ? { key, label } : undefined;
-      })
-      .filter((project): project is { key: string; label: string } => Boolean(project));
-    const allUseOneStoredFamily = storedFamilies.length === indexes.length && new Set(storedFamilies.map((project) => project.key)).size === 1;
-    const containedPrincipal = indexes
-      .map((index) => ({ key: compactFamilyKey(familyWords[index]), label: labelFromWords(familyWords[index]) }))
-      .filter((candidate) => candidate.key.length >= 4)
-      .sort((first, second) => first.key.length - second.key.length)
-      .find((candidate) => indexes.every((index) => compactFamilyKey(familyWords[index]).includes(candidate.key)));
-    const derivedLabel = common.length >= 2
-      ? labelFromWords(common)
-      : containedPrincipal?.label;
-    const derivedKey = derivedLabel ? normalizeProjectKey(derivedLabel) : undefined;
-    const project: ProjectFamily = allUseOneStoredFamily
-      ? storedFamilies[0]
-      : { key: derivedKey ?? projectFromRow(rows[indexes[0]]).key, label: derivedLabel ?? projectFromRow(rows[indexes[0]]).label };
-    for (const index of indexes) assignments.set(String(rows[index].id), project);
+  for (const candidate of candidates) {
+    const project = candidate.key ? canonicalByKey.get(candidate.key) : undefined;
+    assignments.set(candidate.id, project ?? { key: candidate.key, label: candidate.label });
   }
 
   return assignments;
