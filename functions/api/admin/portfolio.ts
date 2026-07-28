@@ -1,5 +1,5 @@
 import { adminImageUrl, json, requireAdmin, type Env } from "../../lib/access";
-import { suggestedCategory } from "../../lib/imports";
+import { recoverLegacyPortfolio } from "../../lib/portfolioRecovery";
 import { projectFamiliesForRows, projectFamilyFromLabel, projectFromRow } from "../../lib/projects";
 
 const editable = new Set(["categoryId", "status", "rank", "isCategoryCover", "isHidden", "altText", "projectLabel"]);
@@ -8,21 +8,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const auth = requireAdmin(request);
   if (auth instanceof Response) return auth;
 
-  // The initial database schema held every new Archive image for manual
-  // approval. Archive is now automatic. Release the previously imported
-  // Archive items when Admin opens, while keeping an explicit owner Hide
-  // action distinct (it uses the value 2 below).
-  await env.DB.prepare("UPDATE portfolio_images SET is_hidden = 0, updated_at = CURRENT_TIMESTAMP WHERE status = 'archive' AND is_hidden = 1").run();
-
-  // Earlier imports used Vehicle Wraps as the silent catch-all category.
-  // Re-run deterministic filename classification for those legacy records.
-  const legacyRows = await env.DB.prepare("SELECT id, category_id, source_filename FROM portfolio_images WHERE category_id = 'vehicle-wraps-fleet-graphics'").all<any>();
-  const reclassifications = legacyRows.results
-    .map((row) => ({ id: String(row.id), categoryId: suggestedCategory(String(row.source_filename ?? ""), "vehicle-wraps-fleet-graphics") }))
-    .filter((row) => row.categoryId !== "vehicle-wraps-fleet-graphics");
-  if (reclassifications.length) {
-    await env.DB.batch(reclassifications.map((row) => env.DB.prepare("UPDATE portfolio_images SET category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(row.categoryId, row.id)));
-  }
+  await recoverLegacyPortfolio(env);
 
   const result = await env.DB.prepare("SELECT id, category_id, status, display_rank, is_category_cover, is_hidden, source_filename, source_zip, alt_text, project_key, project_label FROM portfolio_images ORDER BY category_id, status, display_rank ASC").all();
   const families = projectFamiliesForRows(result.results);
