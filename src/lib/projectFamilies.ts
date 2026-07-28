@@ -46,5 +46,12 @@ export function addProjectFamilies(images: PortfolioImage[]) {
   for (const image of enriched) {
     if (image.projectKey) counts.set(image.projectKey, (counts.get(image.projectKey) ?? 0) + 1);
   }
-  return enriched.map((image) => ({ ...image, projectCount: image.projectKey ? counts.get(image.projectKey) ?? 0 : 0 }));
+  return enriched.map((image) => ({
+    ...image,
+    // The public API counts a family before it filters to Featured or
+    // Archive. Preserve that authoritative count: recalculating from a
+    // Featured-only response made a promoted lead image look like it had no
+    // additional project views, even when its Archive images existed.
+    projectCount: image.projectCount ?? (image.projectKey ? counts.get(image.projectKey) ?? 0 : 0),
+  }));
 }
