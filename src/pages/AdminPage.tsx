@@ -113,6 +113,7 @@ export default function AdminPage() {
   const [reviewIndex, setReviewIndex] = useState(0);
   const [notice, setNotice] = useState("");
   const [movingImageId, setMovingImageId] = useState<string | null>(null);
+  const [savingTestimonialId, setSavingTestimonialId] = useState<string | null>(null);
   const queueRef = useRef<ImportBatchProgress[]>([]);
   const processingRef = useRef(false);
   const pauseAfterCurrentRef = useRef(false);
@@ -460,14 +461,47 @@ export default function AdminPage() {
     void startImport(clientId, paths);
   }
 
-  function addTestimonial(event: FormEvent<HTMLFormElement>) {
+  async function addTestimonial(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = event.currentTarget;
     const data = new FormData(form);
-    const record: TestimonialRecord = { id: crypto.randomUUID(), text: String(data.get("text") || ""), clientName: String(data.get("clientName") || ""), isActive: false, displayOrder: testimonials.length + 1 };
-    setTestimonials((current) => [...current, record]);
-    form.reset();
-    if (remoteReady) fetch("/api/admin/testimonials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record) });
+    const record = { text: String(data.get("text") || ""), clientName: String(data.get("clientName") || ""), isActive: true, displayOrder: testimonials.length + 1 };
+    if (!remoteReady) {
+      setNotice("The testimonial was not saved because the admin database is unavailable. Please try again after the page reconnects.");
+      return;
+    }
+    setSavingTestimonialId("new");
+    try {
+      const response = await fetch("/api/admin/testimonials", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(record) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.testimonial) throw new Error(result.error || "The database did not confirm the testimonial.");
+      setTestimonials((current) => [...current, result.testimonial]);
+      form.reset();
+      setNotice("Testimonial saved and published.");
+    } catch (error) {
+      setNotice(`Testimonial was not saved: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingTestimonialId(null);
+    }
+  }
+
+  async function setTestimonialActive(testimonial: TestimonialRecord, isActive: boolean) {
+    if (!remoteReady) {
+      setNotice("The testimonial status was not changed because the admin database is unavailable.");
+      return;
+    }
+    setSavingTestimonialId(testimonial.id);
+    try {
+      const response = await fetch(`/api/admin/testimonials?id=${encodeURIComponent(testimonial.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ isActive }) });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.error || "The database did not confirm the status change.");
+      setTestimonials((current) => current.map((entry) => entry.id === testimonial.id ? { ...entry, isActive } : entry));
+      setNotice(isActive ? "Testimonial published." : "Testimonial unpublished.");
+    } catch (error) {
+      setNotice(`Testimonial status was not changed: ${error instanceof Error ? error.message : "Unknown error"}`);
+    } finally {
+      setSavingTestimonialId(null);
+    }
   }
 
   function handleFileInput(event: ChangeEvent<HTMLInputElement>) {
@@ -514,10 +548,18 @@ export default function AdminPage() {
   return (
     <main className="min-h-screen bg-ink px-5 py-8 sm:px-8 lg:py-12">
       <div className="mx-auto max-w-[1400px]">
-        <div className="flex flex-wrap items-center justify-between gap-5 border-b border-line pb-6"><a href="/" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange"><ArrowLeft size={16} aria-hidden="true" /> Return Home</a><span className="text-xs font-bold uppercase tracking-[0.18em] text-orange">Private MTD portfolio manager</span></div>
+        <div className="flex flex-wrap items-center justify-between gap-5 border-b border-line pb-6"><a href="/" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange"><ArrowLeft size={16} aria-hidden="true" /> View Homepage</a><span className="text-xs font-bold uppercase tracking-[0.18em] text-orange">Private MTD portfolio manager</span></div>
         {!remoteReady && <p className="mt-6 border border-orange/40 bg-charcoal2 px-4 py-3 text-sm text-bone/70">Local development preview. ZIPs are still opened in this browser, but image transfers are simulated until Cloudflare Access, R2, and D1 are connected.</p>}
         <header className="mt-12"><h1 className="font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">Portfolio Admin</h1></header>
         <nav className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-b border-line pb-4" aria-label="Admin sections">{tabs.map(([id, label]) => <button type="button" key={id} onClick={() => setTab(id)} className={`text-sm font-bold uppercase tracking-wide ${tab === id ? "text-orange" : "text-bone/60 hover:text-bone"}`}>{label}</button>)}</nav>
+        <nav className="mt-5 border border-line bg-charcoal2 px-4 py-4" aria-label="Live site previews">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">Live Site Preview Â· Opens separately</p>
+          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm font-bold text-bone/70">
+            <a href="/" target="_blank" rel="noreferrer" className="hover:text-orange">Homepage</a>
+            <a href="/work" target="_blank" rel="noreferrer" className="hover:text-orange">Work Overview</a>
+            {workCategories.map((category) => <a key={category.id} href={`/work/${category.slug}`} target="_blank" rel="noreferrer" className="hover:text-orange">{category.label}</a>)}
+          </div>
+        </nav>
         {notice && <p className="mt-5 border border-line bg-charcoal2 px-4 py-3 text-sm text-bone/75">{notice}</p>}
 
         {tab === "images" && (
@@ -539,6 +581,11 @@ export default function AdminPage() {
                 </select>
               </label>
             </div>
+            {categoryFilter !== "all" && (() => {
+              const selected = workCategories.find((category) => category.id === categoryFilter);
+              if (!selected) return null;
+              return <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-charcoal2 px-4 py-3 text-sm"><span className="font-bold text-bone/60">Check this arrangement:</span><a href={`/work/${selected.slug}`} target="_blank" rel="noreferrer" className="font-bold text-orange hover:text-bone">Featured Gallery</a><a href={`/work/${selected.slug}/archive`} target="_blank" rel="noreferrer" className="font-bold text-orange hover:text-bone">Archive</a></div>;
+            })()}
             <p className="mt-4 text-sm text-bone/55">Use the arrows on any image to move it within its current category and Featured or Archive section. Each move saves immediately.</p>
             <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredImages.map((image) => (
@@ -583,7 +630,7 @@ export default function AdminPage() {
 
         {tab === "duplicates" && <section className="mt-8 max-w-4xl"><h2 className="font-display text-3xl font-semibold uppercase text-bone">Duplicate Review</h2><p className="mt-3 text-bone/65">Byte-for-byte duplicates are discarded automatically. Only potential visual matches wait here so you can compare them before deciding.</p>{duplicateReviews.length === 0 ? <p className="mt-6 border border-line p-5 text-sm text-bone/60">No duplicate decisions are waiting.</p> : <div className="mt-6 space-y-5">{duplicateReviews.map((review) => <article key={review.id} className="border border-line bg-charcoal2 p-5"><p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">Potential duplicate</p><p className="mt-2 text-sm text-bone">{displayFilename(review.sourceFilename)} <span className="text-bone/55">from {review.sourceZip}</span></p><div className="mt-5 grid gap-4 sm:grid-cols-2">{[["Existing image", review.existingImage], ["Incoming image", review.incomingImage]].map(([label, image]) => <div className="border border-line p-3" key={String(label)}><p className="text-xs font-bold uppercase tracking-wide text-bone/60">{label}</p>{typeof image === "object" && image && "imageUrl" in image && image.imageUrl ? <img src={String(image.imageUrl)} alt={`${label} preview`} className="mt-3 aspect-[4/3] w-full object-cover" /> : <div className="mt-3 flex aspect-[4/3] items-center justify-center bg-ink px-3 text-center text-xs text-bone/45">Preview stays local until an owner decision requires the individual image.</div>}<p className="mt-3 break-words text-sm text-bone/75">{typeof image === "object" && image && "filename" in image ? image.filename : "No incoming file stored"}</p>{typeof image === "object" && image && "sourceZip" in image && image.sourceZip && <p className="mt-1 text-xs text-bone/50">{String(image.sourceZip)}</p>}</div>)}</div><div className="mt-5 flex flex-wrap gap-2"><button type="button" onClick={() => void resolveDuplicate(review, "keep-existing-only")} className="min-h-11 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Keep existing only</button><button type="button" onClick={() => void resolveDuplicate(review, "keep-new-only")} className="min-h-11 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Keep new only</button><button type="button" onClick={() => void resolveDuplicate(review, "keep-both")} className="min-h-11 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Keep both</button><button type="button" onClick={() => void resolveDuplicate(review, "use-existing-in-category")} className="min-h-11 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Use existing in selected category</button></div></article>)}</div>}</section>}
 
-        {tab === "testimonials" && <section className="mt-8 max-w-3xl"><h2 className="font-display text-3xl font-semibold uppercase text-bone">Testimonials</h2><p className="mt-3 text-bone/65">Only active testimonials appear in the single carousel above The MTD Difference.</p><form onSubmit={addTestimonial} className="mt-6 grid gap-3"><input name="clientName" required placeholder="Client name" className="border border-line bg-transparent px-3 py-3 text-bone" /><textarea name="text" required rows={4} placeholder="Testimonial text" className="border border-line bg-transparent px-3 py-3 text-bone" /><button type="submit" className="w-fit bg-orange px-5 py-3 text-sm font-bold uppercase text-ink">Add Testimonial</button></form><div className="mt-7 space-y-3">{testimonials.map((testimonial) => <article key={testimonial.id} className="border border-line bg-charcoal2 p-4"><p className="text-bone">{testimonial.text}</p><p className="mt-2 text-sm text-bone/55">{testimonial.clientName} Â· {testimonial.isActive ? "Active" : "Inactive"}</p></article>)}</div></section>}
+        {tab === "testimonials" && <section className="mt-8 max-w-3xl"><h2 className="font-display text-3xl font-semibold uppercase text-bone">Testimonials</h2><p className="mt-3 text-bone/65">New testimonials publish when the database confirms they are saved. Use Publish or Unpublish below to control the homepage carousel.</p><form onSubmit={addTestimonial} className="mt-6 grid gap-3"><input name="clientName" required placeholder="Client name" className="border border-line bg-transparent px-3 py-3 text-bone" /><textarea name="text" required rows={4} placeholder="Testimonial text" className="border border-line bg-transparent px-3 py-3 text-bone" /><button type="submit" disabled={!remoteReady || savingTestimonialId !== null} className="w-fit bg-orange px-5 py-3 text-sm font-bold uppercase text-ink disabled:cursor-not-allowed disabled:opacity-45">{savingTestimonialId === "new" ? "Publishingâ€¦" : "Publish Testimonial"}</button></form><div className="mt-7 space-y-3">{testimonials.length === 0 && <p className="border border-line p-5 text-sm text-bone/60">No saved testimonials yet.</p>}{testimonials.map((testimonial) => <article key={testimonial.id} className="border border-line bg-charcoal2 p-4"><p className="text-bone">{testimonial.text}</p><div className="mt-3 flex flex-wrap items-center justify-between gap-3"><p className="text-sm text-bone/55">{testimonial.clientName} Â· <span className={testimonial.isActive ? "text-orange" : ""}>{testimonial.isActive ? "Published" : "Unpublished"}</span></p><button type="button" disabled={savingTestimonialId !== null} onClick={() => void setTestimonialActive(testimonial, !testimonial.isActive)} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange disabled:cursor-not-allowed disabled:opacity-45">{savingTestimonialId === testimonial.id ? "Savingâ€¦" : testimonial.isActive ? "Unpublish" : "Publish"}</button></div></article>)}</div></section>}
       </div>
     </main>
   );
