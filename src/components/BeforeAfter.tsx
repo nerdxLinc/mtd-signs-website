@@ -2,8 +2,10 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import beforeTruck from "../assets/before-truck.jpg";
 import afterTruck from "../assets/after-truck.jpg";
+import { useTranslation } from "../lib/i18n";
 
 export default function BeforeAfter() {
+  const { t } = useTranslation();
   return (
     <section className="bg-ink">
       <div className="relative grid grid-cols-2">
@@ -43,8 +45,8 @@ export default function BeforeAfter() {
 
       <div className="bg-ink px-5 sm:px-8 py-6 text-center sm:text-left sm:px-12">
         <p className="font-display font-semibold uppercase text-xl sm:text-2xl">
-          <span className="text-bone">Same truck. </span>
-          <span className="text-orange">Different business.</span>
+          <span className="text-bone">{t("sameTruck")} </span>
+          <span className="text-orange">{t("differentBusiness")}</span>
         </p>
       </div>
     </section>
