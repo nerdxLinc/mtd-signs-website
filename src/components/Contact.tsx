@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Phone, Mail, MapPin, ArrowRight } from "lucide-react";
+import { useTranslation } from "../lib/i18n";
 
 export default function Contact() {
+  const { t } = useTranslation();
   const [submitted, setSubmitted] = useState(false);
 
   function handleSubmit(e: React.FormEvent) {
@@ -22,8 +24,8 @@ export default function Contact() {
           transition={{ duration: 0.6, ease: "easeOut" }}
         >
           <h2 className="font-display font-semibold uppercase leading-[0.95] display-tight text-4xl sm:text-5xl">
-            <span className="block text-bone">Ready When</span>
-            <span className="block text-orange">You Are.</span>
+            <span className="block text-bone">{t("readyWhen")}</span>
+            <span className="block text-orange">{t("youAre")}</span>
           </h2>
           <span className="block mt-4 h-px w-20 bg-orange" />
 
@@ -63,10 +65,10 @@ export default function Contact() {
           {submitted ? (
             <div className="border border-orange/40 bg-charcoal2 px-6 py-8">
               <p className="font-display uppercase text-xl text-bone">
-                Message sent.
+                {t("messageSent")}
               </p>
               <p className="mt-2 text-bone/70 text-sm">
-                We&rsquo;ll be in touch shortly.
+                {t("inTouch")}
               </p>
             </div>
           ) : (
@@ -74,22 +76,22 @@ export default function Contact() {
               <input
                 required
                 type="text"
-                placeholder="Name"
+                placeholder={t("name")}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <input
                 required
                 type="email"
-                placeholder="Email"
+                placeholder={t("email")}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <input
                 type="tel"
-                placeholder="Phone"
+                placeholder={t("phone")}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <textarea
-                placeholder="Project Details"
+                placeholder={t("projectDetails")}
                 rows={4}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors sm:row-span-2"
               />
@@ -97,7 +99,7 @@ export default function Contact() {
                 type="submit"
                 className="sm:col-span-2 inline-flex items-center justify-center gap-2 bg-orange hover:bg-orange-dim text-ink font-body font-bold text-sm tracking-wide px-6 py-3.5 transition-colors w-fit"
               >
-                SEND MESSAGE <ArrowRight size={16} />
+                {t("sendMessage")} <ArrowRight size={16} />
               </button>
             </form>
           )}
