@@ -1,7 +1,9 @@
+import { useCallback, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import type { PortfolioImage } from "../types/portfolio";
 import { RouterLink } from "../router";
 import { useTranslation } from "../lib/i18n";
+import ImageLightbox from "./ImageLightbox";
 
 type PortfolioImageTileProps = {
   image: PortfolioImage;
@@ -11,16 +13,25 @@ type PortfolioImageTileProps = {
 
 export default function PortfolioImageTile({ image, showProjectLink = true, categoryLabel }: PortfolioImageTileProps) {
   const { t } = useTranslation();
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const hasProjectFamily = showProjectLink && image.projectKey && (image.projectCount ?? 0) > 1;
-  const imageElement = <img src={image.imageUrl} alt={image.altText} loading="lazy" className="aspect-[4/3] h-full w-full object-cover" />;
+  const closeLightbox = useCallback(() => setIsLightboxOpen(false), []);
 
   return (
     <figure className="min-w-0">
-      {hasProjectFamily ? (
-        <RouterLink to={`/projects/${image.projectKey}`} className="group block overflow-hidden" aria-label={`${t("seeMoreProject")}: ${image.projectLabel ?? image.filename}`}>
-          <span className="block transition-transform duration-300 motion-reduce:transition-none sm:group-hover:scale-[1.015]">{imageElement}</span>
-        </RouterLink>
-      ) : imageElement}
+      <button
+        type="button"
+        className="group block w-full cursor-zoom-in overflow-hidden text-left"
+        aria-label={`${t("enlargeImage")}: ${image.altText}`}
+        onClick={() => setIsLightboxOpen(true)}
+      >
+        <img
+          src={image.imageUrl}
+          alt={image.altText}
+          loading="lazy"
+          className="aspect-[4/3] h-full w-full object-cover transition-transform duration-300 motion-reduce:transition-none sm:group-hover:scale-[1.015]"
+        />
+      </button>
       {(categoryLabel || hasProjectFamily) && (
         <figcaption className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-2 text-xs font-bold uppercase tracking-[0.1em]">
           {categoryLabel && <span className="text-bone/45">{categoryLabel}</span>}
@@ -31,6 +42,14 @@ export default function PortfolioImageTile({ image, showProjectLink = true, cate
           )}
         </figcaption>
       )}
+      <ImageLightbox
+        open={isLightboxOpen}
+        src={image.imageUrl}
+        alt={image.altText}
+        closeLabel={t("closeImage")}
+        onClose={closeLightbox}
+      />
     </figure>
   );
 }
+
