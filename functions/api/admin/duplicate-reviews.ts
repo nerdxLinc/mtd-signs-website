@@ -8,6 +8,12 @@ function reviewImage(prefix: string, row: any) {
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const email = requireAdmin(request); if (email instanceof Response) return email;
+  const exactBatches = await env.DB.prepare("SELECT DISTINCT review.import_id FROM import_duplicate_reviews review JOIN portfolio_imports batch ON batch.id = review.import_id WHERE batch.imported_by = ? AND review.review_status = 'pending' AND review.duplicate_kind = 'exact'").bind(email).all<any>();
+  await env.DB.batch([
+    env.DB.prepare("UPDATE portfolio_import_items SET item_status = 'skipped', updated_at = CURRENT_TIMESTAMP WHERE id IN (SELECT review.import_item_id FROM import_duplicate_reviews review JOIN portfolio_imports batch ON batch.id = review.import_id WHERE batch.imported_by = ? AND review.review_status = 'pending' AND review.duplicate_kind = 'exact')").bind(email),
+    env.DB.prepare("UPDATE import_duplicate_reviews SET review_status = 'resolved', resolution = 'automatic-exact-discard', resolved_at = CURRENT_TIMESTAMP WHERE id IN (SELECT review.id FROM import_duplicate_reviews review JOIN portfolio_imports batch ON batch.id = review.import_id WHERE batch.imported_by = ? AND review.review_status = 'pending' AND review.duplicate_kind = 'exact')").bind(email),
+  ]);
+  for (const batch of exactBatches.results) await updateBatchCounts(env, String(batch.import_id));
   const rows = await env.DB.prepare("SELECT review.id, review.import_id, review.duplicate_kind, review.review_status, item.source_filename, batch.source_name AS source_zip, existing.id AS existing_id, existing.source_filename AS existing_filename, existing.source_zip AS existing_source_zip, existing.width AS existing_width, existing.height AS existing_height, existing.source_size AS existing_size, incoming.id AS incoming_id, incoming.source_filename AS incoming_filename, incoming.source_zip AS incoming_source_zip, incoming.width AS incoming_width, incoming.height AS incoming_height, incoming.source_size AS incoming_size FROM import_duplicate_reviews review JOIN portfolio_imports batch ON batch.id = review.import_id JOIN portfolio_import_items item ON item.id = review.import_item_id JOIN portfolio_images existing ON existing.id = review.existing_image_id LEFT JOIN portfolio_images incoming ON incoming.id = review.incoming_image_id WHERE batch.imported_by = ? AND review.review_status = 'pending' ORDER BY review.created_at ASC").bind(email).all<any>();
   return json({ reviews: rows.results.map((row) => ({ id: row.id, batchId: row.import_id, sourceFilename: row.source_filename, sourceZip: row.source_zip, kind: row.duplicate_kind, status: row.review_status, existingImage: reviewImage("existing", { id: row.existing_id, source_filename: row.existing_filename, source_zip: row.existing_source_zip, width: row.existing_width, height: row.existing_height, source_size: row.existing_size }), incomingImage: reviewImage("incoming", { id: row.incoming_id, source_filename: row.incoming_filename ?? row.source_filename, source_zip: row.incoming_source_zip, width: row.incoming_width, height: row.incoming_height, source_size: row.incoming_size }) })) });
 };
@@ -41,3 +47,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   await updateBatchCounts(env, review.import_id);
   return json({ ok: true });
 };
+
