@@ -30,11 +30,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const potential = existingRows.results.filter((row) => row.content_hash !== hash && likelySameName(sourceFilename, row.source_filename));
 
   if (exact && !action) {
-    const itemId = await upsertImportItem(env, { importId: batchId, sourceFilename, status: "duplicate", hash, size: file.size, width: dimensions.width, height: dimensions.height, duplicateKind: "exact" });
-    const duplicateId = crypto.randomUUID();
-    await env.DB.prepare("INSERT INTO import_duplicate_reviews (id, import_id, import_item_id, duplicate_kind, existing_image_id) VALUES (?, ?, ?, 'exact', ?)").bind(duplicateId, batchId, itemId, exact.id).run();
+    // A matching content hash means the files are byte-for-byte identical.
+    // Keep the existing portfolio record and discard the incoming copy without
+    // creating a review item or writing another object to R2.
+    await upsertImportItem(env, { importId: batchId, sourceFilename, status: "skipped", hash, size: file.size, width: dimensions.width, height: dimensions.height, duplicateKind: "exact" });
     await updateBatchCounts(env, batchId);
-    return json({ outcome: "duplicate", review: { id: duplicateId, batchId, sourceFilename, sourceZip, kind: "exact", status: "pending", existingImage: toDuplicateImage(exact), incomingImage: { filename: sourceFilename, width: dimensions.width, height: dimensions.height, size: file.size } } }, { status: 202 });
+    return json({ outcome: "skipped", reason: "exact-duplicate", existingImageId: exact.id });
   }
 
   if (exact && action === "keep-both") {
