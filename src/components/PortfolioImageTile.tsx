@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import type { PortfolioImage } from "../types/portfolio";
 import { RouterLink } from "../router";
+import { useTranslation } from "../lib/i18n";
 
 type PortfolioImageTileProps = {
   image: PortfolioImage;
@@ -9,6 +10,7 @@ type PortfolioImageTileProps = {
 };
 
 export default function PortfolioImageTile({ image, showProjectLink = true, categoryLabel }: PortfolioImageTileProps) {
+  const { t } = useTranslation();
   const hasProjectFamily = showProjectLink && image.projectKey && (image.projectCount ?? 0) > 1;
 
   return (
@@ -19,7 +21,7 @@ export default function PortfolioImageTile({ image, showProjectLink = true, cate
           {categoryLabel && <span className="text-bone/45">{categoryLabel}</span>}
           {hasProjectFamily && (
             <RouterLink to={`/projects/${image.projectKey}`} className="inline-flex min-h-9 items-center gap-1.5 text-bone/60 transition-colors hover:text-orange focus-visible:text-orange">
-              See more from this project <ArrowRight size={13} aria-hidden="true" />
+              {t("seeMoreProject")} <ArrowRight size={13} aria-hidden="true" />
             </RouterLink>
           )}
         </figcaption>
