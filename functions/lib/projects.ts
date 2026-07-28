@@ -2,9 +2,9 @@
 // a view/deliverable suffix is the project; keys ignore case and separators.
 const projectSuffixes = new Set([
   "after", "angle", "back", "banner", "before", "close", "closeup", "copy", "detail", "display", "driver", "exterior",
-  "fleet", "front", "image", "install", "installation", "installed", "interior", "left", "logo", "mockup", "monument", "night",
+  "design", "designs", "fleet", "front", "graphic", "graphics", "image", "install", "installation", "installed", "interior", "left", "logo", "mockup", "monument", "night",
   "passenger", "photo", "pylon", "rear", "render", "right", "side", "sign", "signage", "trailer", "truck", "van", "vehicle",
-  "view", "wall", "window", "wrap",
+  "view", "wall", "wayfinding", "website", "window", "wrap",
 ]);
 
 function filenameWords(value: string, includeDirectories = false) {
@@ -29,11 +29,28 @@ function projectFamilyFromWords(words: string[]) {
   return { key, label };
 }
 
+function familyWordsFromFilename(filename: string) {
+  const words = filenameWords(filename);
+  const firstDescriptor = words.findIndex((word, index) => index > 0 && (projectSuffixes.has(word.toLowerCase()) || /^v?\d+$/i.test(word) || /^rev(?:ision)?\d*$/i.test(word)));
+  return words.slice(0, firstDescriptor > 0 ? firstDescriptor : words.length);
+}
+
+function commonPrefixLength(first: string[], second: string[]) {
+  const limit = Math.min(first.length, second.length);
+  let count = 0;
+  while (count < limit && normalizeProjectKey(first[count]) === normalizeProjectKey(second[count])) count += 1;
+  return count;
+}
+
+function labelFromWords(words: string[]) {
+  return words.map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(" ").trim();
+}
+
 // ZIP packages often place every image inside a generic folder (for example,
 // "renamed/"). A folder is not part of the client's name, so derive project
 // families from the actual filename only.
 export function projectFamilyFromFilename(filename: string) {
-  return projectFamilyFromWords(filenameWords(filename));
+  return projectFamilyFromWords(familyWordsFromFilename(filename));
 }
 
 function legacyProjectFamilyFromPath(filename: string) {
@@ -61,5 +78,66 @@ export function projectFromRow(row: any) {
     key: !storedIsLegacyPathValue && storedKey ? storedKey : derived?.key,
     label: !storedIsLegacyPathValue && storedLabel ? storedLabel : derived?.label,
   };
+}
+
+type ProjectFamily = { key?: string; label?: string };
+
+/**
+ * Resolve project families from the whole collection, rather than treating
+ * each filename in isolation. This is what makes Taco Local / Taco-Local /
+ * taco_local design files behave as one clickable project family.
+ */
+export function projectFamiliesForRows(rows: any[]) {
+  const assignments = new Map<string, ProjectFamily>();
+  const familyWords = rows.map((row) => familyWordsFromFilename(String(row.source_filename ?? "")));
+  const parents = rows.map((_, index) => index);
+  const find = (index: number): number => {
+    if (parents[index] !== index) parents[index] = find(parents[index]);
+    return parents[index];
+  };
+  const join = (first: number, second: number) => {
+    const firstParent = find(first); const secondParent = find(second);
+    if (firstParent !== secondParent) parents[secondParent] = firstParent;
+  };
+
+  for (let first = 0; first < rows.length; first += 1) {
+    for (let second = first + 1; second < rows.length; second += 1) {
+      // A two-word shared prefix is deliberate: it handles meaningful client
+      // names such as Taco Local and Good Earth without grouping generic
+      // single words such as "sign" or "truck".
+      if (commonPrefixLength(familyWords[first], familyWords[second]) >= 2) join(first, second);
+    }
+  }
+
+  const groups = new Map<number, number[]>();
+  rows.forEach((_, index) => {
+    const root = find(index);
+    groups.set(root, [...(groups.get(root) ?? []), index]);
+  });
+
+  for (const indexes of groups.values()) {
+    let common = familyWords[indexes[0]] ?? [];
+    for (const index of indexes.slice(1)) common = common.slice(0, commonPrefixLength(common, familyWords[index]));
+    const storedFamilies = indexes
+      .map((index) => {
+        const key = rows[index].project_key ? String(rows[index].project_key) : undefined;
+        const label = rows[index].project_label ? String(rows[index].project_label) : undefined;
+        // Ignore the earlier "renamed/client" path value; projectFromRow
+        // already knows when it is legacy import metadata rather than a
+        // deliberate owner-provided project name.
+        const resolved = projectFromRow(rows[index]);
+        return key && label && resolved.key === key ? { key, label } : undefined;
+      })
+      .filter((project): project is { key: string; label: string } => Boolean(project));
+    const allUseOneStoredFamily = storedFamilies.length === indexes.length && new Set(storedFamilies.map((project) => project.key)).size === 1;
+    const derivedLabel = common.length >= 2 ? labelFromWords(common) : undefined;
+    const derivedKey = derivedLabel ? normalizeProjectKey(derivedLabel) : undefined;
+    const project: ProjectFamily = allUseOneStoredFamily
+      ? storedFamilies[0]
+      : { key: derivedKey ?? projectFromRow(rows[indexes[0]]).key, label: derivedLabel ?? projectFromRow(rows[indexes[0]]).label };
+    for (const index of indexes) assignments.set(String(rows[index].id), project);
+  }
+
+  return assignments;
 }
 
