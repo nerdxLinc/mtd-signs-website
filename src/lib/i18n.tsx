@@ -64,7 +64,7 @@ const copy = {
     categories: {
       "vehicle-wraps-fleet-graphics": "Vehicle Wraps & Fleet Graphics",
       "logo-identity-design": "Logo & Identity Design",
-      "commercial-branding": "Commercial Branding",
+      "commercial-branding": "Commercial Signage",
       "church-ministry-graphics": "Church & Ministry Graphics",
       "public-safety-graphics": "Public Safety Graphics",
       "specialty-projects": "Specialty Projects",
@@ -72,7 +72,7 @@ const copy = {
     shortCategories: {
       "vehicle-wraps-fleet-graphics": "Vehicle Wraps",
       "logo-identity-design": "Logo & Identity",
-      "commercial-branding": "Commercial Branding",
+      "commercial-branding": "Commercial Signage",
       "church-ministry-graphics": "Church & Ministry",
       "public-safety-graphics": "Public Safety",
       "specialty-projects": "Specialty Projects",
@@ -139,7 +139,7 @@ const copy = {
     categories: {
       "vehicle-wraps-fleet-graphics": "Rotulacion de Vehiculos y Flotillas",
       "logo-identity-design": "Diseno de Logotipo e Identidad",
-      "commercial-branding": "Marca Comercial",
+      "commercial-branding": "Senalizacion Comercial",
       "church-ministry-graphics": "Graficos para Iglesias y Ministerios",
       "public-safety-graphics": "Graficos de Seguridad Publica",
       "specialty-projects": "Proyectos Especiales",
@@ -147,7 +147,7 @@ const copy = {
     shortCategories: {
       "vehicle-wraps-fleet-graphics": "Rotulacion de Vehiculos",
       "logo-identity-design": "Logotipo e Identidad",
-      "commercial-branding": "Marca Comercial",
+      "commercial-branding": "Senalizacion Comercial",
       "church-ministry-graphics": "Iglesias y Ministerios",
       "public-safety-graphics": "Seguridad Publica",
       "specialty-projects": "Proyectos Especiales",
@@ -194,4 +194,3 @@ export function useTranslation() {
   if (!context) throw new Error("useTranslation must be used inside LanguageProvider");
   return context;
 }
-
