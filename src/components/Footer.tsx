@@ -6,7 +6,7 @@ export default function Footer() {
     <footer className="border-t border-line bg-ink px-5 py-7 sm:px-8">
       <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-4 text-xs">
         <p className="text-bone/50">
-          Â© {new Date().getFullYear()} MTD Signs & Graphics. {t("allRights")}
+          © {new Date().getFullYear()} MTD Signs & Graphics. {t("allRights")}
         </p>
         <a href="#top" className="text-bone/70 transition-colors hover:text-orange">
           {t("backToTop")}
