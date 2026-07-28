@@ -10,12 +10,27 @@ import { suggestedCategory } from "./imports";
 export async function recoverLegacyPortfolio(env: Env) {
   await env.DB.prepare("UPDATE portfolio_images SET is_hidden = 0, updated_at = CURRENT_TIMESTAMP WHERE status = 'archive' AND is_hidden = 1").run();
 
-  const vehicleRows = await env.DB.prepare("SELECT id, source_filename FROM portfolio_images WHERE category_id = 'vehicle-wraps-fleet-graphics'").all<any>();
-  const fixes = vehicleRows.results
-    .map((row) => ({ id: String(row.id), categoryId: suggestedCategory(String(row.source_filename ?? ""), "vehicle-wraps-fleet-graphics") }))
-    .filter((row) => row.categoryId !== "vehicle-wraps-fleet-graphics");
+  const rows = await env.DB.prepare("SELECT id, category_id, source_filename FROM portfolio_images").all<any>();
+  const strongAutomaticCategories = new Set([
+    "church-ministry-graphics",
+    "public-safety-graphics",
+    "logo-identity-design",
+  ]);
+  const fixes = rows.results
+    .map((row) => {
+      const currentCategory = String(row.category_id ?? "specialty-projects");
+      const categoryId = suggestedCategory(String(row.source_filename ?? ""), currentCategory);
+      return { id: String(row.id), currentCategory, categoryId };
+    })
+    // Correct legacy Vehicle Wrap fallbacks as before. Also let a clear
+    // church, public-safety, or logo identifier take priority over generic
+    // commercial-signage words such as "wall" or "wayfinding". This moves
+    // files like Perryville First Assembly into Church & Ministry.
+    .filter((row) => row.categoryId !== row.currentCategory && (
+      row.currentCategory === "vehicle-wraps-fleet-graphics"
+      || strongAutomaticCategories.has(row.categoryId)
+    ));
   if (fixes.length) {
     await env.DB.batch(fixes.map((row) => env.DB.prepare("UPDATE portfolio_images SET category_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(row.categoryId, row.id)));
   }
 }
-
