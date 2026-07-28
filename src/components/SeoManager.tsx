@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { getWorkCategory } from "../data/workCategories";
 import { useTranslation } from "../lib/i18n";
 import { projectLabelFromKey } from "../lib/projectFamilies";
@@ -28,6 +28,25 @@ function setCanonical(url: string) {
 
 export default function SeoManager({ path }: { path: string }) {
   const { categoryLabel, language } = useTranslation();
+  const normalizedPath = path.replace(/\/$/, "") || "/";
+  const currentProjectKey = normalizedPath.startsWith("/projects/") ? normalizedPath.replace("/projects/", "") : "";
+  const [resolvedProjectLabel, setResolvedProjectLabel] = useState("");
+
+  useEffect(() => {
+    if (!currentProjectKey || currentProjectKey.includes("/")) {
+      setResolvedProjectLabel("");
+      return;
+    }
+    let active = true;
+    fetch(`/api/portfolio?project=${encodeURIComponent(currentProjectKey)}`)
+      .then((response) => response.ok ? response.json() : Promise.reject())
+      .then((response: { images?: Array<{ projectLabel?: string }> }) => {
+        if (active) setResolvedProjectLabel(response.images?.[0]?.projectLabel ?? "");
+      })
+      .catch(() => { if (active) setResolvedProjectLabel(""); });
+    return () => { active = false; };
+  }, [currentProjectKey]);
+
   const metadata = useMemo(() => {
     const normalized = path.replace(/\/$/, "") || "/";
     const workPath = normalized.startsWith("/work/") ? normalized.replace("/work/", "") : "";
@@ -53,7 +72,7 @@ export default function SeoManager({ path }: { path: string }) {
       };
     }
     if (projectKey && !projectKey.includes("/")) {
-      const label = projectLabelFromKey(projectKey);
+      const label = resolvedProjectLabel || projectLabelFromKey(projectKey);
       return {
         title: `${label} | MTD Signs & Graphics`,
         description: language === "es" ? `Vea el proyecto ${label} de MTD Signs & Graphics.` : `View the ${label} project by MTD Signs & Graphics.`,
@@ -77,7 +96,7 @@ export default function SeoManager({ path }: { path: string }) {
       canonical: SITE_URL,
       robots: "index, follow",
     };
-  }, [categoryLabel, language, path]);
+  }, [categoryLabel, language, path, resolvedProjectLabel]);
 
   useEffect(() => {
     document.title = metadata.title;
