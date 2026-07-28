@@ -49,10 +49,10 @@ function imageType(bytes) {
 function category(name) {
   const text = name.toLowerCase();
   if (/(fire|police|sheriff|ems|rescue|public-safety)/.test(text)) return "Public Safety";
-  if (/(church|ministry|worship|baptist|fellowship)/.test(text)) return "Church & Ministry";
-  if (/(logo|identity|brand-mark|wordmark)/.test(text)) return "Logo & Identity";
+  if (/(church|ministry|worship|baptist|fellowship|assembly|disciples|chapel|parish|congregation)/.test(text)) return "Church & Ministry";
+  if (/(logo|identity|brand-mark|brandmark|wordmark|letterhead|business-card)/.test(text)) return "Logo & Identity";
   if (/(truck|van|trailer|vehicle|fleet|wrap|passenger-side|driver-side|rear-angle)/.test(text)) return "Vehicle Wraps";
-  if (/(sign|pylon|monument|window|wall|display)/.test(text)) return "Commercial Branding";
+  if (/(sign|signage|pylon|monument|window|wall|display|wayfinding|storefront|awning|cabinet)/.test(text)) return "Commercial Branding";
   return "Specialty Projects";
 }
 
@@ -81,3 +81,4 @@ for (const source of sources) {
 const exact = [...hashes.values()].filter((group) => group.length > 1);
 const potential = [...potentialKeys.values()].filter((group) => group.length > 1 && new Set(group.map((entry) => entry.hash)).size > 1);
 console.log(JSON.stringify({ archives: archiveResults, unreadable, exactDuplicateGroups: exact.length, exactDuplicateExamples: exact.slice(0, 10), potentialDuplicateGroups: potential.length, potentialDuplicateExamples: potential.slice(0, 10) }, null, 2));
+
