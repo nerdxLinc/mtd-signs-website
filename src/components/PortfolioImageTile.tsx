@@ -24,11 +24,13 @@ export default function PortfolioImageTile({ image, showProjectLink = true, cate
         className="group block w-full cursor-zoom-in overflow-hidden text-left"
         aria-label={`${t("enlargeImage")}: ${image.altText}`}
         onClick={() => setIsLightboxOpen(true)}
+        onContextMenu={(event) => event.preventDefault()}
       >
         <img
           src={image.imageUrl}
           alt={image.altText}
           loading="lazy"
+          draggable={false}
           className="aspect-[4/3] h-full w-full object-cover transition-transform duration-300 motion-reduce:transition-none sm:group-hover:scale-[1.015]"
         />
       </button>
