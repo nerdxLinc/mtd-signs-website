@@ -1,6 +1,16 @@
 export type Env = {
   DB: D1Database;
   PORTFOLIO_BUCKET: R2Bucket;
+  EMAIL?: {
+    send(message: {
+      to: string | { email: string; name?: string };
+      from: string | { email: string; name?: string };
+      replyTo?: string | { email: string; name?: string };
+      subject: string;
+      text?: string;
+      html?: string;
+    }): Promise<{ messageId: string }>;
+  };
 };
 
 export function json(data: unknown, init: ResponseInit = {}) {

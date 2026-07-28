@@ -21,6 +21,8 @@ type ContactInquiry = {
   project_details: string | null;
   language: "en" | "es";
   status: "new" | "read" | "archived";
+  notification_sent: number | boolean;
+  notification_error: string | null;
   created_at: string;
 };
 
@@ -602,7 +604,7 @@ export default function AdminPage() {
                   <div className="flex flex-wrap items-start justify-between gap-4">
                     <div>
                       <p className="font-body text-lg font-bold text-bone">{inquiry.name}</p>
-                      <p className="mt-1 text-sm text-bone/60">{new Date(`${inquiry.created_at.replace(" ", "T")}Z`).toLocaleString()} · {inquiry.language === "es" ? "Spanish" : "English"} · <span className={inquiry.status === "new" ? "text-orange" : ""}>{inquiry.status}</span></p>
+                      <p className="mt-1 text-sm text-bone/60">{new Date(`${inquiry.created_at.replace(" ", "T")}Z`).toLocaleString()} · {inquiry.language === "es" ? "Spanish" : "English"} · <span className={inquiry.status === "new" ? "text-orange" : ""}>{inquiry.status}</span> · {inquiry.notification_sent ? "Email alert sent" : "Email alert not sent"}</p>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {inquiry.status !== "read" && <button type="button" onClick={() => void setInquiryStatus(inquiry, "read")} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Mark Read</button>}
@@ -615,6 +617,7 @@ export default function AdminPage() {
                     {inquiry.phone && <a href={`tel:${inquiry.phone.replace(/[^\d+]/g, "")}`} className="font-bold text-orange hover:text-bone">{inquiry.phone}</a>}
                   </div>
                   {inquiry.project_details && <p className="mt-4 whitespace-pre-wrap border-t border-line pt-4 text-bone/80">{inquiry.project_details}</p>}
+                  {!inquiry.notification_sent && inquiry.notification_error && <p className="mt-3 text-xs text-bone/50">Notification note: {inquiry.notification_error}</p>}
                 </article>
               ))}
             </div>

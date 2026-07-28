@@ -65,6 +65,47 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       VALUES (?, ?, ?, ?, ?, ?, 'new')
     `).bind(id, name, email, phone || null, projectDetails || null, language).run();
 
+    let notificationSent = false;
+    let notificationError: string | null = null;
+    try {
+      if (!env.EMAIL) throw new Error("Cloudflare Email Service binding EMAIL is not configured.");
+      await env.EMAIL.send({
+        to: "mtdsigns@gmail.com",
+        from: { email: "website@mtdsigns.com", name: "MTD Signs Website" },
+        replyTo: { email, name },
+        subject: `New website inquiry from ${name}`,
+        text: [
+          "A new project inquiry was submitted at mtdsigns.com.",
+          "",
+          `Name: ${name}`,
+          `Email: ${email}`,
+          `Phone: ${phone || "Not provided"}`,
+          `Language: ${language === "es" ? "Spanish" : "English"}`,
+          "",
+          "Project details:",
+          projectDetails || "Not provided",
+          "",
+          "The inquiry is also saved in the private MTD Admin inbox.",
+        ].join("\n"),
+      });
+      notificationSent = true;
+    } catch (error) {
+      notificationError = error instanceof Error ? error.message.slice(0, 1000) : "Email notification failed.";
+      console.error("Contact inquiry notification could not be sent", error);
+    }
+
+    try {
+      await env.DB.prepare(`
+        UPDATE contact_submissions
+        SET notification_sent = ?, notification_error = ?, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ?
+      `).bind(notificationSent ? 1 : 0, notificationError, id).run();
+    } catch (error) {
+      // The durable inquiry is already saved. Never turn a notification-audit
+      // update into a false failure for the visitor.
+      console.error("Contact notification audit could not be updated", error);
+    }
+
     return json({ received: true, inquiryId: id }, { status: 201 });
   } catch (error) {
     console.error("Contact inquiry could not be stored", error);

@@ -14,10 +14,11 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0005_contact_submissions.sql
    ```
 4. Deploy the site as a Cloudflare Pages project using `npm run build` and `dist` as the build output. The included `_redirects` file keeps direct public routes working.
-5. Add the two bindings to Pages Functions exactly as named: `DB` for D1 and `PORTFOLIO_BUCKET` for R2. Do not use placeholder values in a deployment.
-6. In Cloudflare Zero Trust, create a Cloudflare Access application for `https://YOUR-DOMAIN/admin*` and a second one for `https://YOUR-DOMAIN/api/admin/*`. Add only the people or email domains that should manage MTD's portfolio.
-7. Ensure Access forwards `Cf-Access-Authenticated-User-Email`. The middleware and every admin API endpoint reject requests without it; hiding the admin link alone is never used as protection.
-8. Visit `/admin` after Access login. Upload image files or the Claude ZIP packages. ZIP images are suggested a category, imported as hidden Archive records, checked for exact and possible duplicates, and then reviewed before they are visible publicly.
+5. Add the two storage bindings to Pages Functions exactly as named: `DB` for D1 and `PORTFOLIO_BUCKET` for R2. Do not use placeholder values in a deployment.
+6. Onboard `mtdsigns.com` to Cloudflare Email Service, verify `mtdsigns@gmail.com` as a destination, and add the Pages send-email binding `EMAIL`. Restrict the destination to `mtdsigns@gmail.com` and the sender to `website@mtdsigns.com`. A contact inquiry is always saved to D1 first; an email failure is recorded on that inquiry and never discards the lead.
+7. In Cloudflare Zero Trust, create a Cloudflare Access application for `https://YOUR-DOMAIN/admin*` and a second one for `https://YOUR-DOMAIN/api/admin/*`. Add only the people or email domains that should manage MTD's portfolio.
+8. Ensure Access forwards `Cf-Access-Authenticated-User-Email`. The middleware and every admin API endpoint reject requests without it; hiding the admin link alone is never used as protection.
+9. Visit `/admin` after Access login. Upload image files or the Claude ZIP packages. ZIP images are suggested a category, imported as hidden Archive records, checked for exact and possible duplicates, and then reviewed before they are visible publicly.
 
 ## Browser ZIP importer
 
@@ -35,5 +36,5 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
 - Featured and More Work remain separate within each category.
 - The original uploaded ZIPs, mapping logs, and reports are not published. ZIP image files go to R2; selected CSV/Markdown notes are retained only as private import records.
 - New testimonials are inactive by default. Activate and order them in `/admin` when approved; only active testimonials show above **THE MTD DIFFERENCE**.
-- The public contact form confirms success only after its inquiry is stored in D1. Read and manage those records under **Inquiries** in `/admin`.
+- The public contact form confirms success only after its inquiry is stored in D1. It then attempts the `EMAIL` alert to `mtdsigns@gmail.com`; delivery status and any error are visible under **Inquiries** in `/admin`.
 - Image filenames automatically create project families. For example, `Taco Local`, `Taco-Local`, and `taco_local` normalize to the same family. The public gallery shows **See more from this project** only when at least two visible images share that family. If a filename needs correction, update its **Project** value in `/admin`; the original R2 object is not changed.
