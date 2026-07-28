@@ -4,7 +4,7 @@ import { useTranslation } from "../lib/i18n";
 import { projectLabelFromKey } from "../lib/projectFamilies";
 
 const SITE_URL = "https://www.mtdsigns.com";
-const DEFAULT_IMAGE = `${SITE_URL}/mtd-signs-social-preview.png`;
+const DEFAULT_IMAGE = `${SITE_URL}/mtd-signs-social-preview.jpg`;
 
 function setMeta(selector: string, attributes: Record<string, string>, content: string) {
   let element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -107,6 +107,9 @@ export default function SeoManager({ path }: { path: string }) {
     setMeta('meta[property="og:description"]', { property: "og:description" }, metadata.description);
     setMeta('meta[property="og:url"]', { property: "og:url" }, metadata.canonical);
     setMeta('meta[property="og:image"]', { property: "og:image" }, DEFAULT_IMAGE);
+    setMeta('meta[property="og:image:type"]', { property: "og:image:type" }, "image/jpeg");
+    setMeta('meta[property="og:image:width"]', { property: "og:image:width" }, "1185");
+    setMeta('meta[property="og:image:height"]', { property: "og:image:height" }, "622");
     setMeta('meta[property="og:type"]', { property: "og:type" }, "website");
     setMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "MTD Signs & Graphics");
     setMeta('meta[property="og:locale"]', { property: "og:locale" }, language === "es" ? "es_US" : "en_US");
