@@ -13,8 +13,9 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   const body = await request.json() as { text?: string; clientName?: string; isActive?: boolean; displayOrder?: number };
   if (!body.text?.trim() || !body.clientName?.trim()) return json({ error: "Client name and testimonial text are required." }, { status: 400 });
   const id = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO testimonials (id, testimonial_text, client_name, is_active, display_order) VALUES (?, ?, ?, ?, ?)").bind(id, body.text.trim(), body.clientName.trim(), body.isActive ? 1 : 0, Number(body.displayOrder ?? 100)).run();
-  return json({ testimonial: { id, text: body.text.trim(), clientName: body.clientName.trim(), isActive: Boolean(body.isActive), displayOrder: Number(body.displayOrder ?? 100) } }, { status: 201 });
+  const isActive = body.isActive !== false;
+  await env.DB.prepare("INSERT INTO testimonials (id, testimonial_text, client_name, is_active, display_order) VALUES (?, ?, ?, ?, ?)").bind(id, body.text.trim(), body.clientName.trim(), isActive ? 1 : 0, Number(body.displayOrder ?? 100)).run();
+  return json({ testimonial: { id, text: body.text.trim(), clientName: body.clientName.trim(), isActive, displayOrder: Number(body.displayOrder ?? 100) } }, { status: 201 });
 };
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
@@ -34,3 +35,4 @@ export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
   await env.DB.prepare("DELETE FROM testimonials WHERE id = ?").bind(id).run();
   return json({ ok: true });
 };
+
