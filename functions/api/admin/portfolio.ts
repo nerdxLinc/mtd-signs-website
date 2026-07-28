@@ -20,9 +20,24 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   if (email instanceof Response) return email;
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return json({ error: "Missing image id" }, { status: 400 });
-  const current: any = await env.DB.prepare("SELECT id, category_id, project_key, project_label, source_filename FROM portfolio_images WHERE id = ?").bind(id).first();
+  const current: any = await env.DB.prepare("SELECT id, category_id, status, project_key, project_label, source_filename FROM portfolio_images WHERE id = ?").bind(id).first();
   if (!current) return json({ error: "Image not found" }, { status: 404 });
   const body = await request.json() as Record<string, unknown>;
+  if (body.move === "left" || body.move === "right" || body.move === "up" || body.move === "down") {
+    const columns = Math.max(1, Math.min(3, Math.floor(Number(body.columns) || 3)));
+    const rows = await env.DB.prepare("SELECT id FROM portfolio_images WHERE category_id = ? AND status = ? ORDER BY display_rank ASC, id ASC").bind(current.category_id, current.status).all<any>();
+    const orderedIds = rows.results.map((row) => String(row.id));
+    const fromIndex = orderedIds.indexOf(id);
+    if (fromIndex < 0) return json({ error: "Image order could not be found" }, { status: 404 });
+    const distance = body.move === "up" || body.move === "down" ? columns : 1;
+    const offset = body.move === "left" || body.move === "up" ? -distance : distance;
+    const toIndex = Math.max(0, Math.min(orderedIds.length - 1, fromIndex + offset));
+    if (fromIndex === toIndex) return json({ ok: true, moved: false, position: fromIndex + 1 });
+    const [movedId] = orderedIds.splice(fromIndex, 1);
+    orderedIds.splice(toIndex, 0, movedId);
+    await env.DB.batch(orderedIds.map((imageId, index) => env.DB.prepare("UPDATE portfolio_images SET display_rank = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind((index + 1) * 10, imageId)));
+    return json({ ok: true, moved: true, position: toIndex + 1, savedBy: email });
+  }
   const keys = Object.keys(body).filter((key) => editable.has(key));
   if (!keys.length) return json({ error: "No editable values supplied" }, { status: 400 });
   const fields: string[] = [];
