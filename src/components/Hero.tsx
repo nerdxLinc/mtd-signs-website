@@ -1,8 +1,10 @@
 import { ArrowRight } from "lucide-react";
 import heroTruck from "../assets/hero-truck-final.png";
 import logo from "../assets/mtd-metallic-logo.png";
+import { useTranslation } from "../lib/i18n";
 
 export default function Hero() {
+  const { t } = useTranslation();
   return (
     <section id="top" className="mtd-hero" aria-labelledby="hero-heading">
       <div className="mtd-hero__art" aria-hidden="true">
@@ -17,17 +19,17 @@ export default function Hero() {
           <img className="mtd-hero__mobile-logo" src={logo} alt="" />
         </div>
         <h1 id="hero-heading" className="mtd-hero__headline">
-          <span>First Impressions</span>
-          <span>Matter.</span>
+          <span>{t("heroFirst")}</span>
+          <span>{t("heroMatter")}</span>
         </h1>
-        <p className="mtd-hero__supporting-copy">Signs, wraps, and graphics made to be seen.</p>
+        <p className="mtd-hero__supporting-copy">{t("heroSupport")}</p>
 
         <div className="mtd-hero__actions">
           <a href="#work" className="mtd-hero__primary-action">
-            What We Do <ArrowRight size={16} aria-hidden="true" />
+            {t("whatWeDo")} <ArrowRight size={16} aria-hidden="true" />
           </a>
           <a href="#contact" className="mtd-hero__secondary-action">
-            Start Your Project <ArrowRight size={16} aria-hidden="true" />
+            {t("startProject")} <ArrowRight size={16} aria-hidden="true" />
           </a>
         </div>
       </div>
