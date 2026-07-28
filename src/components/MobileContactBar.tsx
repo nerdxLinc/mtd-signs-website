@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "../lib/i18n";
 
 const MOBILE_SHELL_QUERY = "(max-width: 639px), (min-width: 568px) and (max-width: 959px) and (max-height: 500px) and (orientation: landscape)";
 
@@ -13,6 +14,7 @@ function shouldHideContactBar() {
 }
 
 export default function MobileContactBar() {
+  const { t } = useTranslation();
   const [hidden, setHidden] = useState(() => shouldHideContactBar());
   const [contactVisibility, setContactVisibility] = useState<"unknown" | "visible" | "outside">("unknown");
 
@@ -80,10 +82,10 @@ export default function MobileContactBar() {
   return (
     <nav className="mobile-contact-bar relative z-50 flex min-h-16 border-t border-line bg-ink px-4 pb-[env(safe-area-inset-bottom)] pt-2 sm:hidden" aria-label="Mobile contact actions">
       <a href="tel:5013291111" className="flex min-h-11 flex-1 items-center justify-center border border-line px-3 text-center font-body text-sm font-bold text-bone transition-colors hover:border-orange hover:text-orange">
-        Call Us
+        {t("callUs")}
       </a>
       <a href="/#contact" className="ml-3 flex min-h-11 flex-1 items-center justify-center bg-orange px-3 text-center font-body text-sm font-bold text-ink transition-colors hover:bg-orange-dim">
-        Start Your Project
+        {t("startProject")}
       </a>
     </nav>
   );
