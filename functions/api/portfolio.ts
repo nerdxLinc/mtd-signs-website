@@ -1,4 +1,5 @@
 import { json, publicImageUrl, type Env } from "../lib/access";
+import { recoverLegacyPortfolio } from "../lib/portfolioRecovery";
 import { normalizeProjectKey, projectFamiliesForRows } from "../lib/projects";
 
 function mapRows(rows: any[]) {
@@ -28,6 +29,7 @@ function mapRows(rows: any[]) {
 }
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+  await recoverLegacyPortfolio(env);
   const url = new URL(request.url);
   const category = url.searchParams.get("category");
   const status = url.searchParams.get("status");
