@@ -1,9 +1,10 @@
 import { json, publicImageUrl, type Env } from "../lib/access";
-import { normalizeProjectKey, projectFromRow } from "../lib/projects";
+import { normalizeProjectKey, projectFamiliesForRows } from "../lib/projects";
 
 function mapRows(rows: any[]) {
+  const families = projectFamiliesForRows(rows);
   const mapped = rows.map((row) => {
-    const project = projectFromRow(row);
+    const project = families.get(String(row.id)) ?? {};
     return {
       id: row.id,
       categoryId: row.category_id,
@@ -51,3 +52,4 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   images.sort((first, second) => first.rank - second.rank);
   return json({ source: "cloudflare", images });
 };
+
