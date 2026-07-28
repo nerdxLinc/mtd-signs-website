@@ -28,7 +28,7 @@ export const workCategories: WorkCategory[] = [
   {
     id: "commercial-branding",
     slug: "commercial-branding",
-    label: "Commercial Branding",
+    label: "Commercial Signage",
     fallbackCoverImage: workCmg,
     description: "Commercial graphics, signage, and branded environments.",
     displayOrder: 3,
