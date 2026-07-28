@@ -12,10 +12,15 @@ type PortfolioImageTileProps = {
 export default function PortfolioImageTile({ image, showProjectLink = true, categoryLabel }: PortfolioImageTileProps) {
   const { t } = useTranslation();
   const hasProjectFamily = showProjectLink && image.projectKey && (image.projectCount ?? 0) > 1;
+  const imageElement = <img src={image.imageUrl} alt={image.altText} loading="lazy" className="aspect-[4/3] h-full w-full object-cover" />;
 
   return (
     <figure className="min-w-0">
-      <img src={image.imageUrl} alt={image.altText} loading="lazy" className="aspect-[4/3] h-full w-full object-cover" />
+      {hasProjectFamily ? (
+        <RouterLink to={`/projects/${image.projectKey}`} className="group block overflow-hidden" aria-label={`${t("seeMoreProject")}: ${image.projectLabel ?? image.filename}`}>
+          <span className="block transition-transform duration-300 motion-reduce:transition-none sm:group-hover:scale-[1.015]">{imageElement}</span>
+        </RouterLink>
+      ) : imageElement}
       {(categoryLabel || hasProjectFamily) && (
         <figcaption className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-2 text-xs font-bold uppercase tracking-[0.1em]">
           {categoryLabel && <span className="text-bone/45">{categoryLabel}</span>}
