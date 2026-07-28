@@ -1,4 +1,6 @@
 import { adminImageUrl, contentTypeFor, imageDimensions, sha256, type Env } from "./access";
+export { likelySameName } from "./duplicateNames";
+import { likelySameName } from "./duplicateNames";
 import { projectFamilyFromFilename } from "./projects";
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -19,15 +21,6 @@ export function suggestedCategory(filename: string, fallback: string) {
 
 export function safeFilename(filename: string) {
   return filename.split("/").pop()?.replace(/[^a-zA-Z0-9._-]+/g, "-") || "portfolio-image";
-}
-
-function filenameTokens(filename: string) {
-  return new Set(filename.toLowerCase().replace(/\.[a-z0-9]+$/, "").split(/[^a-z0-9]+/).filter((word) => word.length > 2 && !["side", "angle", "image", "copy"].includes(word)));
-}
-
-export function likelySameName(first: string, second: string) {
-  const a = filenameTokens(first); const b = filenameTokens(second);
-  return [...a].filter((word) => b.has(word)).length >= 2;
 }
 
 export async function updateBatchCounts(env: Env, importId: string) {
@@ -70,4 +63,3 @@ export async function imageUploadDetails(file: File) {
 export function toDuplicateImage(row: any) {
   return { id: row.id, filename: row.source_filename, sourceZip: row.source_zip ?? undefined, width: row.width, height: row.height, size: row.source_size, imageUrl: adminImageUrl(row.id) };
 }
-
