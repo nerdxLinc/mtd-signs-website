@@ -1,6 +1,6 @@
 import { adminImageUrl, json, requireAdmin, type Env } from "../../lib/access";
 import { suggestedCategory } from "../../lib/imports";
-import { projectFamilyFromLabel, projectFromRow } from "../../lib/projects";
+import { projectFamiliesForRows, projectFamilyFromLabel, projectFromRow } from "../../lib/projects";
 
 const editable = new Set(["categoryId", "status", "rank", "isCategoryCover", "isHidden", "altText", "projectLabel"]);
 
@@ -25,7 +25,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   const result = await env.DB.prepare("SELECT id, category_id, status, display_rank, is_category_cover, is_hidden, source_filename, source_zip, alt_text, project_key, project_label FROM portfolio_images ORDER BY category_id, status, display_rank ASC").all();
-  return json({ images: result.results.map((row: any) => { const project = projectFromRow(row); return { id: row.id, categoryId: row.category_id, status: row.status, rank: row.display_rank, isCategoryCover: Boolean(row.is_category_cover), isHidden: Boolean(row.is_hidden), imageUrl: adminImageUrl(row.id), altText: row.alt_text, filename: row.source_filename, sourceZip: row.source_zip, projectKey: project.key, projectLabel: project.label }; }) });
+  const families = projectFamiliesForRows(result.results);
+  return json({ images: result.results.map((row: any) => { const project = families.get(String(row.id)) ?? projectFromRow(row); return { id: row.id, categoryId: row.category_id, status: row.status, rank: row.display_rank, isCategoryCover: Boolean(row.is_category_cover), isHidden: Boolean(row.is_hidden), imageUrl: adminImageUrl(row.id), altText: row.alt_text, filename: row.source_filename, sourceZip: row.source_zip, projectKey: project.key, projectLabel: project.label }; }) });
 };
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
@@ -68,13 +69,25 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
   // only the selected image is promoted. This keeps Featured Work curated
   // while the project gallery can show the complete body of work.
   const isPublishing = body.status === "featured" || body.isCategoryCover === true;
-  const project = projectFromRow(current);
+  const projectRows = await env.DB.prepare("SELECT id, project_key, project_label, source_filename FROM portfolio_images").all<any>();
+  const projectFamilies = projectFamiliesForRows(projectRows.results);
+  const project = projectFamilies.get(String(current.id)) ?? projectFromRow(current);
   let publishedFamilyCount = 0;
   let recategorizedFamilyCount = 0;
+  let relabeledFamilyCount = 0;
+  if (keys.includes("projectLabel") && project.key) {
+    const requestedProject = projectFamilyFromLabel(String(body.projectLabel ?? ""));
+    const familyIds = projectRows.results
+      .filter((row) => projectFamilies.get(String(row.id))?.key === project.key)
+      .map((row) => String(row.id));
+    relabeledFamilyCount = familyIds.length;
+    for (const familyId of familyIds) {
+      statements.push(env.DB.prepare("UPDATE portfolio_images SET project_key = ?, project_label = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?").bind(requestedProject?.key ?? null, requestedProject?.label ?? null, familyId));
+    }
+  }
   if (keys.includes("categoryId") && typeof body.categoryId === "string" && project.key) {
-    const familyRows = await env.DB.prepare("SELECT id, project_key, project_label, source_filename FROM portfolio_images").all<any>();
-    const familyIds = familyRows.results
-      .filter((row) => projectFromRow(row).key === project.key)
+    const familyIds = projectRows.results
+      .filter((row) => projectFamilies.get(String(row.id))?.key === project.key)
       .map((row) => String(row.id));
     recategorizedFamilyCount = familyIds.length;
     for (const familyId of familyIds) {
@@ -82,9 +95,8 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
     }
   }
   if (isPublishing && project.key) {
-    const familyRows = await env.DB.prepare("SELECT id, project_key, project_label, source_filename FROM portfolio_images").all<any>();
-    const familyIds = familyRows.results
-      .filter((row) => projectFromRow(row).key === project.key)
+    const familyIds = projectRows.results
+      .filter((row) => projectFamilies.get(String(row.id))?.key === project.key)
       .map((row) => String(row.id));
     publishedFamilyCount = familyIds.length;
     for (const familyId of familyIds) {
@@ -92,7 +104,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env }) => {
     }
   }
   await env.DB.batch(statements);
-  return json({ ok: true, savedBy: email, publishedFamilyCount, recategorizedFamilyCount });
+  return json({ ok: true, savedBy: email, publishedFamilyCount, recategorizedFamilyCount, relabeledFamilyCount });
 };
 
 export const onRequestDelete: PagesFunction<Env> = async ({ request, env }) => {
