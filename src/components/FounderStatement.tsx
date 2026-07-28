@@ -1,8 +1,10 @@
 import { motion } from "framer-motion";
 import barrySignature from "../assets/barry-signature.png";
 import leonaKemperDentistSign from "../assets/leona-kemper-dentist-sign.jpg";
+import { useTranslation } from "../lib/i18n";
 
 export default function FounderStatement() {
+  const { t } = useTranslation();
   return (
     <section id="story" className="relative bg-ink overflow-hidden">
       <div className="grid lg:grid-cols-2">
@@ -27,15 +29,14 @@ export default function FounderStatement() {
               SINCE 1994
             </p>
             <h2 className="font-display font-semibold uppercase leading-[0.95] display-tight text-4xl sm:text-5xl">
-              <span className="block text-bone">Thirty years.</span>
-              <span className="block text-bone">One mission.</span>
-              <span className="block text-bone">Make you</span>
-              <span className="block text-orange">unforgettable.</span>
+              <span className="block text-bone">{t("thirtyYears")}</span>
+              <span className="block text-bone">{t("oneMission")}</span>
+              <span className="block text-bone">{t("makeYou")}</span>
+              <span className="block text-orange">{t("unforgettable")}</span>
             </h2>
 
             <p className="mt-7 text-bone/75 text-base leading-relaxed max-w-sm">
-              Signs, wraps, environments and graphics that build credibility,
-              attract attention and sell for you every single day.
+              {t("founderCopy")}
             </p>
 
             <div className="mt-8">
@@ -45,7 +46,7 @@ export default function FounderStatement() {
                 className="w-48 max-w-full mix-blend-screen invert opacity-90"
               />
               <p className="mt-2 font-body text-[11px] font-bold tracking-[0.16em] text-orange">
-                Barry Branscum, Owner, Designer
+                {t("ownerDesigner")}
               </p>
             </div>
           </motion.div>
