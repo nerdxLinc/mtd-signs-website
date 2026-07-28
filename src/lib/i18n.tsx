@@ -32,8 +32,10 @@ const copy = {
     phone: "Phone",
     projectDetails: "Project Details",
     sendMessage: "Send Message",
-    messageSent: "Message sent.",
-    inTouch: "We'll be in touch shortly.",
+    sendingMessage: "Sending...",
+    messageSent: "Message received.",
+    inTouch: "Your project details are saved. We'll be in touch shortly.",
+    messageError: "We couldn't receive your message. Please try again or call 501.329.1111.",
     allRights: "All rights reserved.",
     backToTop: "Back to top",
     callUs: "Call Us",
@@ -109,8 +111,10 @@ const copy = {
     phone: "Telefono",
     projectDetails: "Detalles del proyecto",
     sendMessage: "Enviar mensaje",
-    messageSent: "Mensaje enviado.",
-    inTouch: "Nos comunicaremos pronto.",
+    sendingMessage: "Enviando...",
+    messageSent: "Mensaje recibido.",
+    inTouch: "Guardamos los detalles de su proyecto. Nos comunicaremos pronto.",
+    messageError: "No pudimos recibir su mensaje. Inténtelo de nuevo o llame al 501.329.1111.",
     allRights: "Todos los derechos reservados.",
     backToTop: "Volver arriba",
     callUs: "Llamenos",
@@ -198,4 +202,3 @@ export function useTranslation() {
   if (!context) throw new Error("useTranslation must be used inside LanguageProvider");
   return context;
 }
-

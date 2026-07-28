@@ -9,8 +9,9 @@ import logo800 from "../assets/mtd-metallic-logo-800.webp";
 import logo1200 from "../assets/mtd-metallic-logo-1200.webp";
 import { useTranslation } from "../lib/i18n";
 
-const heroTruckSrcSet = `${heroTruck960} 960w, ${heroTruck1600} 1600w, ${heroTruck2400} 2400w`;
-const logoSrcSet = `${logo480} 480w, ${logo800} 800w, ${logo1200} 1200w`;
+const transparentPixel = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==";
+const heroTruckSrcSet = `${transparentPixel} 1w, ${heroTruck960} 960w, ${heroTruck1600} 1600w, ${heroTruck2400} 2400w`;
+const logoSrcSet = `${transparentPixel} 1w, ${logo480} 480w, ${logo800} 800w, ${logo1200} 1200w`;
 
 export default function Hero() {
   const { t } = useTranslation();
@@ -21,7 +22,7 @@ export default function Hero() {
           className="mtd-hero__truck"
           src={heroTruck}
           srcSet={heroTruckSrcSet}
-          sizes="(max-width: 960px) 86vw, (min-width: 2089px) 1504px, 72vw"
+          sizes="(max-width: 640px) 1px, (max-width: 960px) 86vw, (min-width: 2089px) 1504px, 72vw"
           width="3000"
           height="1838"
           decoding="async"
@@ -35,7 +36,7 @@ export default function Hero() {
           className="mtd-hero__logo"
           src={logo}
           srcSet={logoSrcSet}
-          sizes="(min-width: 1740px) 400px, 23vw"
+          sizes="(max-width: 640px) 1px, (min-width: 1740px) 400px, 23vw"
           width="3000"
           height="1702"
           decoding="async"
@@ -46,7 +47,7 @@ export default function Hero() {
             className="mtd-hero__mobile-truck"
             src={heroTruck}
             srcSet={heroTruckSrcSet}
-            sizes="(max-width: 375px) calc(100vw + 64px), 110vw"
+            sizes="(min-width: 641px) 1px, (max-width: 375px) calc(100vw + 64px), 110vw"
             width="3000"
             height="1838"
             decoding="async"
@@ -56,7 +57,7 @@ export default function Hero() {
             className="mtd-hero__mobile-logo"
             src={logo}
             srcSet={logoSrcSet}
-            sizes="(max-width: 466px) 48vw, 224px"
+            sizes="(min-width: 641px) 1px, (max-width: 466px) 48vw, 224px"
             width="3000"
             height="1702"
             decoding="async"

@@ -4,14 +4,39 @@ import { Phone, Mail, MapPin, ArrowRight } from "lucide-react";
 import { useTranslation } from "../lib/i18n";
 
 export default function Contact() {
-  const { t } = useTranslation();
-  const [submitted, setSubmitted] = useState(false);
+  const { language, t } = useTranslation();
+  const [status, setStatus] = useState<"idle" | "sending" | "received" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    // NOTE: no backend wired up yet. Swap this for a real endpoint
-    // (Formspree, an API route, etc.) before launch.
-    setSubmitted(true);
+    if (status === "sending") return;
+    const form = e.currentTarget;
+    const data = new FormData(form);
+    setStatus("sending");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.get("name"),
+          email: data.get("email"),
+          phone: data.get("phone"),
+          projectDetails: data.get("projectDetails"),
+          website: data.get("website"),
+          language,
+        }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.received) throw new Error(result.error ?? t("messageError"));
+      setStatus("received");
+      form.reset();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : t("messageError"));
+      setStatus("error");
+    }
   }
 
   return (
@@ -62,7 +87,7 @@ export default function Contact() {
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
         >
-          {submitted ? (
+          {status === "received" ? (
             <div className="border border-orange/40 bg-charcoal2 px-6 py-8">
               <p className="font-display uppercase text-xl text-bone">
                 {t("messageSent")}
@@ -72,34 +97,51 @@ export default function Contact() {
               </p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} className="grid sm:grid-cols-2 gap-4" aria-busy={status === "sending"}>
               <input
+                name="name"
+                autoComplete="name"
                 required
                 type="text"
                 placeholder={t("name")}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <input
+                name="email"
+                autoComplete="email"
                 required
                 type="email"
                 placeholder={t("email")}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <input
+                name="phone"
+                autoComplete="tel"
                 type="tel"
                 placeholder={t("phone")}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <textarea
+                name="projectDetails"
                 placeholder={t("projectDetails")}
                 rows={4}
                 className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors sm:row-span-2"
               />
+              <label className="absolute -left-[10000px] h-px w-px overflow-hidden" aria-hidden="true">
+                Website
+                <input name="website" tabIndex={-1} autoComplete="off" />
+              </label>
+              {status === "error" && (
+                <p role="alert" className="sm:col-span-2 border border-orange/50 bg-charcoal2 px-4 py-3 text-sm text-bone">
+                  {errorMessage || t("messageError")}
+                </p>
+              )}
               <button
                 type="submit"
-                className="sm:col-span-2 inline-flex items-center justify-center gap-2 bg-orange hover:bg-orange-dim text-ink font-body font-bold text-sm tracking-wide px-6 py-3.5 transition-colors w-fit"
+                disabled={status === "sending"}
+                className="sm:col-span-2 inline-flex items-center justify-center gap-2 bg-orange hover:bg-orange-dim text-ink font-body font-bold text-sm tracking-wide px-6 py-3.5 transition-colors w-fit disabled:cursor-wait disabled:opacity-60"
               >
-                {t("sendMessage")} <ArrowRight size={16} />
+                {status === "sending" ? t("sendingMessage") : t("sendMessage")} <ArrowRight size={16} />
               </button>
             </form>
           )}
