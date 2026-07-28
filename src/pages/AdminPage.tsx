@@ -2,7 +2,7 @@
 // Runtime checks protect those boundaries; keep this page independently buildable from the public site.
 // @ts-nocheck
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
-import { ArrowLeft, ChevronDown, ChevronUp, Eye, EyeOff, Pause, Play, RotateCcw, Trash2, Upload, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Pause, Play, RotateCcw, Trash2, Upload, X } from "lucide-react";
 import { BrowserZipReader } from "../lib/browserZipReader";
 import { developmentPortfolioImages } from "../data/devPortfolio";
 import { workCategories } from "../data/workCategories";
@@ -12,6 +12,7 @@ import type { PortfolioImage, PortfolioStatus, TestimonialRecord } from "../type
 type AdminTab = "images" | "review" | "upload" | "duplicates" | "testimonials";
 type DuplicateAction = "keep-existing-only" | "keep-new-only" | "keep-both" | "use-existing-in-category";
 type UploadResponse = { outcome: "uploaded" | "duplicate"; review?: DuplicateReview };
+type ImageMoveDirection = "left" | "right" | "up" | "down";
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_SOURCE_RECORD_BYTES = 512 * 1024;
@@ -49,6 +50,42 @@ function isImage(file: File) { return /\.(jpe?g|png|webp|avif)$/i.test(file.name
 function formatBytes(bytes: number) { return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(bytes >= 100 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`; }
 function displayFilename(path: string) { return path.split("/").filter(Boolean).pop() ?? path; }
 
+function adminGridColumns() {
+  if (window.matchMedia("(min-width: 1024px)").matches) return 3;
+  if (window.matchMedia("(min-width: 640px)").matches) return 2;
+  return 1;
+}
+
+function reorderPortfolioImages(current: PortfolioImage[], id: string, direction: ImageMoveDirection, columns: number) {
+  const selected = current.find((image) => image.id === id);
+  if (!selected) return { images: current, moved: false };
+
+  const siblingSlots: number[] = [];
+  const siblings: PortfolioImage[] = [];
+  current.forEach((image, index) => {
+    if (image.categoryId === selected.categoryId && image.status === selected.status) {
+      siblingSlots.push(index);
+      siblings.push(image);
+    }
+  });
+
+  const fromIndex = siblings.findIndex((image) => image.id === id);
+  const distance = direction === "up" || direction === "down" ? columns : 1;
+  const offset = direction === "left" || direction === "up" ? -distance : distance;
+  const toIndex = Math.max(0, Math.min(siblings.length - 1, fromIndex + offset));
+  if (fromIndex < 0 || fromIndex === toIndex) return { images: current, moved: false };
+
+  const reordered = [...siblings];
+  const [movedImage] = reordered.splice(fromIndex, 1);
+  reordered.splice(toIndex, 0, movedImage);
+
+  const next = [...current];
+  siblingSlots.forEach((slot, index) => {
+    next[slot] = { ...reordered[index], rank: (index + 1) * 10 };
+  });
+  return { images: next, moved: true };
+}
+
 function duplicateImages(review: DuplicateReview): Array<{ label: string; image: DuplicateReview["existingImage"] | DuplicateReview["incomingImage"] }> {
   return [
     { label: "Existing image", image: review.existingImage },
@@ -85,6 +122,7 @@ export default function AdminPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [reviewIndex, setReviewIndex] = useState(0);
   const [notice, setNotice] = useState("");
+  const [movingImageId, setMovingImageId] = useState<string | null>(null);
   const queueRef = useRef<ImportBatchProgress[]>([]);
   const processingRef = useRef(false);
   const pauseAfterCurrentRef = useRef(false);
@@ -185,6 +223,43 @@ export default function AdminPage() {
     else setNotice("Image saved.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "This image could not be saved.");
+    }
+  }
+
+  async function moveImage(id: string, direction: ImageMoveDirection) {
+    if (movingImageId) return;
+    const columns = adminGridColumns();
+    const previousImages = images;
+    const reordered = reorderPortfolioImages(previousImages, id, direction, columns);
+    if (!reordered.moved) {
+      setNotice("That image is already at the edge of this section.");
+      return;
+    }
+
+    setImages(reordered.images);
+    setMovingImageId(id);
+
+    if (!remoteReady) {
+      setNotice("Order updated locally. Connect the Cloudflare database to publish this change.");
+      setMovingImageId(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/portfolio?id=${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ move: direction, columns }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error ?? "This image could not be moved.");
+      await refreshRemoteImages();
+      setNotice("Image order saved.");
+    } catch (error) {
+      setImages(previousImages);
+      setNotice(error instanceof Error ? error.message : "This image could not be moved.");
+    } finally {
+      setMovingImageId(null);
     }
   }
 
@@ -453,7 +528,64 @@ export default function AdminPage() {
         <nav className="mt-10 flex flex-wrap gap-x-6 gap-y-3 border-b border-line pb-4" aria-label="Admin sections">{tabs.map(([id, label]) => <button type="button" key={id} onClick={() => setTab(id)} className={`text-sm font-bold uppercase tracking-wide ${tab === id ? "text-orange" : "text-bone/60 hover:text-bone"}`}>{label}</button>)}</nav>
         {notice && <p className="mt-5 border border-line bg-charcoal2 px-4 py-3 text-sm text-bone/75">{notice}</p>}
 
-        {tab === "images" && <section className="mt-8"><div className="flex flex-wrap gap-4"><label className="text-sm text-bone/70">Category<select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone"><option value="all">All</option>{workCategories.map((category) => <option value={category.id} key={category.id}>{category.label}</option>)}</select></label><label className="text-sm text-bone/70">Status<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | PortfolioStatus)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone"><option value="all">All</option><option value="featured">Featured</option><option value="archive">Archive</option></select></label></div><div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{filteredImages.map((image) => <article className="border border-line bg-charcoal2" key={image.id}><img src={image.imageUrl} alt={image.altText} className="aspect-[4/3] w-full object-cover" /><div className="space-y-3 p-4"><p className="text-xs font-bold uppercase tracking-[0.12em] text-orange">{shortCategory(image.categoryId)} Â· {image.status}</p><p className="truncate text-sm text-bone/70">{image.filename}</p><label className="block text-xs text-bone/60">Change Category<select value={image.categoryId} onChange={(event: ChangeEvent<HTMLSelectElement>) => saveImage(image.id, { categoryId: event.target.value })} className="ml-2 bg-ink px-2 py-1 text-bone">{workCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select></label><label className="block text-xs text-bone/60">Project<input defaultValue={image.projectLabel ?? ""} onBlur={(event) => { if (event.currentTarget.value !== (image.projectLabel ?? "")) saveImage(image.id, { projectLabel: event.currentTarget.value }); }} placeholder="Automatic from filename" className="mt-1 block w-full bg-ink px-2 py-1 text-sm text-bone" /></label><div className="flex flex-wrap gap-2"><button type="button" onClick={() => saveImage(image.id, { status: image.status === "featured" ? "archive" : "featured" })} className="border border-line px-2 py-1 text-xs font-bold text-bone hover:border-orange">{image.status === "featured" ? "Demote to Archive" : "Promote to Featured"}</button><button type="button" onClick={() => saveImage(image.id, { isCategoryCover: true, status: "featured" })} className="border border-line px-2 py-1 text-xs font-bold text-bone hover:border-orange">Make Category Cover</button><button type="button" onClick={() => saveImage(image.id, { rank: Math.max(1, image.rank - 1) })} aria-label="Move Earlier" className="border border-line p-1 text-bone hover:border-orange"><ChevronUp size={15} /></button><button type="button" onClick={() => saveImage(image.id, { rank: image.rank + 1 })} aria-label="Move Later" className="border border-line p-1 text-bone hover:border-orange"><ChevronDown size={15} /></button><button type="button" onClick={() => saveImage(image.id, { isHidden: !image.isHidden })} className="border border-line p-1 text-bone hover:border-orange" aria-label={image.isHidden ? "Make visible" : "Hide"}>{image.isHidden ? <Eye size={15} /> : <EyeOff size={15} />}</button><button type="button" onClick={() => removeImage(image.id)} className="border border-line p-1 text-bone hover:border-orange" aria-label="Delete"><Trash2 size={15} /></button></div></div></article>)}</div></section>}
+        {tab === "images" && (
+          <section className="mt-8">
+            <div className="flex flex-wrap gap-4">
+              <label className="text-sm text-bone/70">
+                Category
+                <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone">
+                  <option value="all">All</option>
+                  {workCategories.map((category) => <option value={category.id} key={category.id}>{category.label}</option>)}
+                </select>
+              </label>
+              <label className="text-sm text-bone/70">
+                Status
+                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | PortfolioStatus)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone">
+                  <option value="all">All</option>
+                  <option value="featured">Featured</option>
+                  <option value="archive">Archive</option>
+                </select>
+              </label>
+            </div>
+            <p className="mt-4 text-sm text-bone/55">Use the arrows on any image to move it within its current category and Featured or Archive section. Each move saves immediately.</p>
+            <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredImages.map((image) => (
+                <article className="border border-line bg-charcoal2" key={image.id}>
+                  <img src={image.imageUrl} alt={image.altText} className="aspect-[4/3] w-full object-cover" />
+                  <div className="space-y-3 p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.12em] text-orange">{shortCategory(image.categoryId)} Â· {image.status}</p>
+                    <p className="truncate text-sm text-bone/70">{image.filename}</p>
+                    <label className="block text-xs text-bone/60">
+                      Change Category
+                      <select value={image.categoryId} onChange={(event: ChangeEvent<HTMLSelectElement>) => saveImage(image.id, { categoryId: event.target.value })} className="ml-2 bg-ink px-2 py-1 text-bone">
+                        {workCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-xs text-bone/60">
+                      Project
+                      <input defaultValue={image.projectLabel ?? ""} onBlur={(event) => { if (event.currentTarget.value !== (image.projectLabel ?? "")) saveImage(image.id, { projectLabel: event.currentTarget.value }); }} placeholder="Automatic from filename" className="mt-1 block w-full bg-ink px-2 py-1 text-sm text-bone" />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" onClick={() => saveImage(image.id, { status: image.status === "featured" ? "archive" : "featured" })} className="border border-line px-2 py-1 text-xs font-bold text-bone hover:border-orange">{image.status === "featured" ? "Demote to Archive" : "Promote to Featured"}</button>
+                      <button type="button" onClick={() => saveImage(image.id, { isCategoryCover: true, status: "featured" })} className="border border-line px-2 py-1 text-xs font-bold text-bone hover:border-orange">Make Category Cover</button>
+                      <button type="button" onClick={() => saveImage(image.id, { isHidden: !image.isHidden })} className="border border-line p-1 text-bone hover:border-orange" aria-label={image.isHidden ? "Make visible" : "Hide"}>{image.isHidden ? <Eye size={15} /> : <EyeOff size={15} />}</button>
+                      <button type="button" onClick={() => removeImage(image.id)} className="border border-line p-1 text-bone hover:border-orange" aria-label="Delete"><Trash2 size={15} /></button>
+                    </div>
+                    <div className="flex items-center justify-between gap-3 border-t border-line pt-3">
+                      <span className="text-xs font-bold uppercase tracking-[0.12em] text-bone/55">Move image</span>
+                      <div className="grid grid-cols-4 gap-1">
+                        <button type="button" disabled={movingImageId === image.id} onClick={() => void moveImage(image.id, "left")} aria-label={`Move ${image.filename} left`} title="Move left" className="flex h-9 w-9 items-center justify-center border border-line text-bone hover:border-orange hover:text-orange disabled:opacity-35"><ChevronLeft size={17} /></button>
+                        <button type="button" disabled={movingImageId === image.id} onClick={() => void moveImage(image.id, "right")} aria-label={`Move ${image.filename} right`} title="Move right" className="flex h-9 w-9 items-center justify-center border border-line text-bone hover:border-orange hover:text-orange disabled:opacity-35"><ChevronRight size={17} /></button>
+                        <button type="button" disabled={movingImageId === image.id} onClick={() => void moveImage(image.id, "up")} aria-label={`Move ${image.filename} up`} title="Move up one row" className="flex h-9 w-9 items-center justify-center border border-line text-bone hover:border-orange hover:text-orange disabled:opacity-35"><ChevronUp size={17} /></button>
+                        <button type="button" disabled={movingImageId === image.id} onClick={() => void moveImage(image.id, "down")} aria-label={`Move ${image.filename} down`} title="Move down one row" className="flex h-9 w-9 items-center justify-center border border-line text-bone hover:border-orange hover:text-orange disabled:opacity-35"><ChevronDown size={17} /></button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
 
         {tab === "upload" && <section className="mt-8 max-w-4xl"><h2 className="font-display text-3xl font-semibold uppercase text-bone">Browser ZIP Import</h2><p className="mt-3 max-w-2xl text-bone/65">Choose original Claude ZIP packages exactly as they are. Each ZIP is opened locally in this browser. Images are extracted and sent one at a time; ZIPs, CSV logs, Markdown reports, and notes are never placed in the public site.</p><label onDragOver={(event) => event.preventDefault()} onDrop={handleDrop} className="mt-7 block cursor-pointer border border-dashed border-line bg-charcoal2 p-6 text-center transition-colors hover:border-orange"><Upload className="mx-auto text-orange" size={22} aria-hidden="true" /><span className="mt-3 block font-body text-sm font-bold uppercase tracking-wide text-bone">Choose ZIP Files or Images</span><span className="mt-2 block text-sm text-bone/55">Original ZIPs up to at least 250 MB are accepted. Large packages run one at a time.</span><input onChange={handleFileInput} type="file" multiple accept="image/jpeg,image/png,image/webp,image/avif,.zip" className="sr-only" /></label><div className="mt-5 flex flex-wrap items-center gap-5"><label className="text-sm text-bone/70">Category for unclear filenames<select value={selectedCategory} onChange={(event) => setSelectedCategory(event.target.value)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone">{workCategories.map((category) => <option value={category.id} key={category.id}>{category.label}</option>)}</select></label><p className="text-sm text-bone/55">Clear filename matches are assigned automatically. Unclear files now default to Specialty Projects, never Vehicle Wraps.</p><label className="inline-flex items-center gap-2 text-sm text-bone/70"><input checked={autoAdvance} onChange={(event) => setAutoAdvance(event.target.checked)} type="checkbox" /> Continue automatically to the next ZIP</label></div>{overall.total > 0 && <p className="mt-6 text-sm text-bone/70">Overall progress: <span className="font-bold text-bone">{overall.complete} of {overall.total} images complete</span></p>}<div className="mt-7 space-y-4">{zipQueue.length === 0 ? <p className="border border-line p-5 text-sm text-bone/60">No files are queued yet. You can add a few ZIPs now and continue with more in another session.</p> : zipQueue.map((item) => { const total = item.entries.filter((entry) => entry.kind === "image").length; const complete = item.uploaded + item.skipped + item.duplicates; return <article key={item.clientId} className="border border-line bg-charcoal2 p-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><p className="font-body text-sm font-bold text-bone">{item.sourceName}</p><p className="mt-1 text-xs text-bone/55">{formatBytes(item.sourceSize)} Â· {item.status.replace("-", " ")}</p></div><div className="flex flex-wrap gap-2">{["queued", "paused", "failed"].includes(item.status) && <button type="button" onClick={() => void startImport(item.clientId)} disabled={isProcessing} className="inline-flex min-h-11 items-center gap-2 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-50"><Play size={14} /> {item.status === "paused" ? "Resume" : "Import"}</button>}{item.status === "processing" && <button type="button" onClick={() => { pauseAfterCurrentRef.current = true; setNotice("This ZIP will pause after the image currently uploading finishes."); }} className="inline-flex min-h-11 items-center gap-2 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange"><Pause size={14} /> Pause after current</button>}{item.failed > 0 && <button type="button" onClick={() => retryFailed(item.clientId)} disabled={isProcessing} className="inline-flex min-h-11 items-center gap-2 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-50"><RotateCcw size={14} /> Retry failed</button>}{["queued", "reading", "processing", "paused"].includes(item.status) && <button type="button" onClick={() => { cancelAfterCurrentRef.current.add(item.clientId); if (item.status !== "processing") updateQueueItem(item.clientId, (current) => ({ ...current, status: "cancelled" })); }} className="inline-flex min-h-11 items-center gap-2 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange"><X size={14} /> Cancel</button>}</div></div><p className="mt-4 text-sm text-bone/75">{total ? `${item.sourceName} â€” ${complete} of ${total} images uploaded or reviewed` : item.status === "reading" ? "Reading the local ZIP directoryâ€¦" : "Ready to read the ZIP directory."}</p>{item.currentFilename && <p className="mt-2 text-xs font-bold uppercase tracking-wide text-orange">Current image: {displayFilename(item.currentFilename)}</p>}{item.sourceSize >= 200 * 1024 * 1024 && <p className="mt-3 text-sm text-orange">Large ZIP: it will be processed locally one image at a time.</p>}{item.message && <p className="mt-3 text-sm text-orange">{item.message}</p>}{item.entries.some((entry) => entry.status === "failed" || entry.kind === "unsupported") && <ul className="mt-4 space-y-1 border-t border-line pt-3 text-xs text-bone/60">{item.entries.filter((entry) => entry.status === "failed" || entry.kind === "unsupported").map((entry) => <li key={entry.path}><span className="font-bold text-orange">{entry.status === "failed" ? "Needs retry:" : "Skipped:"}</span> {entry.path}{entry.error || entry.reason ? ` â€” ${entry.error ?? entry.reason}` : ""}</li>)}</ul>}</article>; })}</div></section>}
 
