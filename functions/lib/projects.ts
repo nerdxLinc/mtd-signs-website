@@ -46,6 +46,10 @@ function labelFromWords(words: string[]) {
   return words.map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(" ").trim();
 }
 
+function compactFamilyKey(words: string[]) {
+  return normalizeProjectKey(labelFromWords(words));
+}
+
 // ZIP packages often place every image inside a generic folder (for example,
 // "renamed/"). A folder is not part of the client's name, so derive project
 // families from the actual filename only.
@@ -105,7 +109,23 @@ export function projectFamiliesForRows(rows: any[]) {
       // A two-word shared prefix is deliberate: it handles meaningful client
       // names such as Taco Local and Good Earth without grouping generic
       // single words such as "sign" or "truck".
-      if (commonPrefixLength(familyWords[first], familyWords[second]) >= 2) join(first, second);
+      if (commonPrefixLength(familyWords[first], familyWords[second]) >= 2) {
+        join(first, second);
+        continue;
+      }
+
+      // Some client names arrive without separators (TacoLocal) while other
+      // images use spaces, hyphens, or an added deliverable word
+      // (Taco Local Design). Treat a complete compact client name contained
+      // in the other filename as the same family. This follows the owner's
+      // rule that the same principal name should group together regardless
+      // of punctuation; a deliberate project-label edit remains available
+      // in Admin to correct a rare false positive.
+      const firstKey = compactFamilyKey(familyWords[first]);
+      const secondKey = compactFamilyKey(familyWords[second]);
+      const sharedPrincipalName = firstKey.length >= 4 && secondKey.length >= 4
+        && (firstKey.includes(secondKey) || secondKey.includes(firstKey));
+      if (sharedPrincipalName) join(first, second);
     }
   }
 
@@ -130,7 +150,14 @@ export function projectFamiliesForRows(rows: any[]) {
       })
       .filter((project): project is { key: string; label: string } => Boolean(project));
     const allUseOneStoredFamily = storedFamilies.length === indexes.length && new Set(storedFamilies.map((project) => project.key)).size === 1;
-    const derivedLabel = common.length >= 2 ? labelFromWords(common) : undefined;
+    const containedPrincipal = indexes
+      .map((index) => ({ key: compactFamilyKey(familyWords[index]), label: labelFromWords(familyWords[index]) }))
+      .filter((candidate) => candidate.key.length >= 4)
+      .sort((first, second) => first.key.length - second.key.length)
+      .find((candidate) => indexes.every((index) => compactFamilyKey(familyWords[index]).includes(candidate.key)));
+    const derivedLabel = common.length >= 2
+      ? labelFromWords(common)
+      : containedPrincipal?.label;
     const derivedKey = derivedLabel ? normalizeProjectKey(derivedLabel) : undefined;
     const project: ProjectFamily = allUseOneStoredFamily
       ? storedFamilies[0]
@@ -140,4 +167,3 @@ export function projectFamiliesForRows(rows: any[]) {
 
   return assignments;
 }
-
