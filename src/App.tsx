@@ -15,6 +15,8 @@ import AdminPage from "./pages/AdminPage";
 import MobileContactBar from "./components/MobileContactBar";
 import { useBrowserPath } from "./router";
 import { useEffect } from "react";
+import LanguageToggle from "./components/LanguageToggle";
+import { useTranslation } from "./lib/i18n";
 
 function PublicPage({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -34,6 +36,7 @@ function PublicPage({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="public-page-shell min-h-screen bg-ink">
+      <LanguageToggle />
       <div className="public-page-scroll">{children}</div>
       <MobileContactBar />
     </div>
@@ -41,6 +44,7 @@ function PublicPage({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  const { t } = useTranslation();
   const path = useBrowserPath().replace(/\/$/, "") || "/";
   const workPath = path.startsWith("/work/") ? path.replace("/work/", "") : "";
   const projectKey = path.startsWith("/projects/") ? path.replace("/projects/", "") : "";
@@ -74,12 +78,12 @@ export default function App() {
         <section id="difference" className="bg-ink px-4 pb-10 sm:px-8 sm:pb-12 lg:pb-14">
           <div className="mx-auto max-w-[1400px]">
             <h2 className="font-display text-5xl font-semibold uppercase leading-[0.88] text-bone sm:text-7xl lg:text-8xl">
-              <span className="block">The MTD</span>
-              <span className="block text-orange">Difference</span>
+              <span className="block">{t("differenceThe")}</span>
+              <span className="block text-orange">{t("differenceWord")}</span>
             </h2>
             <span className="mt-5 block h-px w-20 bg-orange" />
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-bone/70 sm:text-lg">
-              We make your signage reflect the quality of your work.
+              {t("differenceCopy")}
             </p>
           </div>
         </section>
