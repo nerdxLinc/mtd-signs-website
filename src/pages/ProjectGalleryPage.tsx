@@ -9,7 +9,7 @@ type ProjectGalleryPageProps = { projectKey: string };
 
 export default function ProjectGalleryPage({ projectKey }: ProjectGalleryPageProps) {
   const { categoryLabel, t } = useTranslation();
-  const { images, usingDevelopmentFallback } = useProjectImages(projectKey);
+  const { images, usingDevelopmentFallback, loadError } = useProjectImages(projectKey);
   const projectLabel = images[0]?.projectLabel ?? projectLabelFromKey(projectKey);
 
   return (
@@ -26,10 +26,10 @@ export default function ProjectGalleryPage({ projectKey }: ProjectGalleryPagePro
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>
 
-        <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${projectLabel} project images`}>
+        <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${projectLabel} ${t("project")} ${t("featuredImages")}`}>
           {images.map((image) => { const category = getWorkCategory(image.categoryId); return <PortfolioImageTile key={image.id} image={image} showProjectLink={false} categoryLabel={category ? categoryLabel(category.id, category.label) : undefined} />; })}
         </section>
-        {images.length === 0 && <p className="mt-12 text-bone/60">{t("projectSoon")}</p>}
+        {images.length === 0 && <p className="mt-12 text-bone/60">{t(loadError ? "portfolioUnavailable" : "projectSoon")}</p>}
       </div>
     </main>
   );

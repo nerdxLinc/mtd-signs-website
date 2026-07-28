@@ -18,7 +18,7 @@ export default function BeforeAfter() {
         >
           <img
             src={beforeTruck}
-            alt="Unbranded work truck, before MTD wrap"
+            alt={t("beforeTruckAlt")}
             className="h-full w-full object-cover grayscale-[30%]"
           />
         </motion.div>
@@ -32,7 +32,7 @@ export default function BeforeAfter() {
         >
           <img
             src={afterTruck}
-            alt="Same truck after a full custom flame-graphic wrap by MTD"
+            alt={t("afterTruckAlt")}
             className="h-full w-full object-cover"
           />
         </motion.div>

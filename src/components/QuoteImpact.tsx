@@ -25,22 +25,12 @@ export default function QuoteImpact() {
   }, [paused, reducedMotion, testimonials.length]);
 
   if (!loaded) return null;
-  if (testimonials.length === 0) {
-    return (
-      <section id="testimonials" className="bg-ink px-5 py-16 sm:px-8 lg:py-20" aria-label="Testimonial carousel development mode">
-        <div className="mx-auto max-w-3xl border border-line bg-charcoal2 px-6 py-8 sm:px-8">
-          <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-orange">{t("testimonials")}</p>
-          <p className="mt-4 font-display text-2xl font-semibold uppercase leading-tight text-bone">{t("noTestimonials")}</p>
-          <p className="mt-3 text-sm leading-relaxed text-bone/60">{t("noTestimonialsCopy")}</p>
-        </div>
-      </section>
-    );
-  }
+  if (testimonials.length === 0) return null;
   const testimonial = testimonials[index % testimonials.length];
   const move = (direction: -1 | 1) => setIndex((current) => (current + direction + testimonials.length) % testimonials.length);
 
   return (
-    <section id="testimonials" className="relative overflow-hidden bg-ink px-5 py-20 sm:px-8 lg:py-28" aria-label="Client testimonials" onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
+    <section id="testimonials" className="relative overflow-hidden bg-ink px-5 py-20 sm:px-8 lg:py-28" aria-label={t("clientTestimonials")} onMouseEnter={() => setPaused(true)} onMouseLeave={() => setPaused(false)} onFocusCapture={() => setPaused(true)} onBlurCapture={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) setPaused(false); }}>
       <div className="relative mx-auto max-w-3xl">
         <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-orange">{t("whatClientsSay")}</p>
         <figure className="mt-7 min-h-[13rem] sm:min-h-[11rem]">

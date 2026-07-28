@@ -34,7 +34,7 @@ export default function CategorySwitcher({ activeCategoryId, level, activeCatego
             {category.id === activeCategoryId ? (
               <span className="inline-flex min-h-11 items-center px-1.5 font-semibold text-orange" aria-current="page">{categoryLabel(category.id, category.label, true)}</span>
             ) : (
-              <RouterLink className="inline-flex min-h-11 items-center px-1.5 transition-colors hover:text-bone focus-visible:text-bone" to={`/work/${category.slug}`}>
+              <RouterLink className="inline-flex min-h-11 items-center px-1.5 transition-colors hover:text-bone focus-visible:text-bone" to={`/work/${category.slug}${isArchive ? "/archive" : ""}`}>
                 {categoryLabel(category.id, category.label, true)}
               </RouterLink>
             )}

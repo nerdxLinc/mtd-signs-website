@@ -10,7 +10,7 @@ type CategoryArchivePageProps = { category: WorkCategory };
 
 export default function CategoryArchivePage({ category }: CategoryArchivePageProps) {
   const { categoryLabel, t } = useTranslation();
-  const { images, usingDevelopmentFallback } = usePortfolioImages(category.id, "archive");
+  const { images, usingDevelopmentFallback, loadError } = usePortfolioImages(category.id, "archive");
   const label = categoryLabel(category.id, category.label);
   const title = `${label} ${t("archive")}`;
   return (
@@ -27,10 +27,10 @@ export default function CategoryArchivePage({ category }: CategoryArchivePagePro
           <h1 className="font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">{title}</h1>
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>
-        <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${title} images`}>
+        <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${title} ${t("archiveImages")}`}>
           {images.map((image) => <PortfolioImageTile key={image.id} image={image} />)}
         </section>
-        {images.length === 0 && <p className="mt-12 text-bone/60">{t("archiveSoon")}</p>}
+        {images.length === 0 && <p className="mt-12 text-bone/60">{t(loadError ? "portfolioUnavailable" : "archiveSoon")}</p>}
         <CategorySwitcher activeCategoryId={category.id} activeCategorySlug={category.slug} activeCategoryLabel={label} level="archive" />
       </div>
     </main>

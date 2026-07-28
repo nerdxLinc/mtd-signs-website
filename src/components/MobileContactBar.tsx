@@ -80,7 +80,7 @@ export default function MobileContactBar() {
   if (hidden || contactVisibility === "visible" || isWaitingForContactCheck) return null;
 
   return (
-    <nav className="mobile-contact-bar relative z-50 flex min-h-16 border-t border-line bg-ink px-4 pb-[env(safe-area-inset-bottom)] pt-2 sm:hidden" aria-label="Mobile contact actions">
+    <nav className="mobile-contact-bar relative z-50 flex min-h-16 border-t border-line bg-ink px-4 pb-[env(safe-area-inset-bottom)] pt-2 sm:hidden" aria-label={t("mobileContactActions")}>
       <a href="tel:5013291111" className="flex min-h-11 flex-1 items-center justify-center border border-line px-3 text-center font-body text-sm font-bold text-bone transition-colors hover:border-orange hover:text-orange">
         {t("callUs")}
       </a>

@@ -64,10 +64,10 @@ export default function Contact() {
             <li className="flex items-center gap-3">
               <Mail size={18} className="text-orange shrink-0" />
               <a
-                href="mailto:info@mtdsigns.com"
+                href="mailto:mtdsigns@gmail.com"
                 className="hover:text-orange transition-colors"
               >
-                info@mtdsigns.com
+                mtdsigns@gmail.com
               </a>
             </li>
             <li className="flex items-start gap-3">

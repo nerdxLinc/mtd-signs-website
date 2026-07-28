@@ -10,7 +10,7 @@ type CategoryGalleryPageProps = { category: WorkCategory };
 
 export default function CategoryGalleryPage({ category }: CategoryGalleryPageProps) {
   const { categoryLabel, t } = useTranslation();
-  const { images, usingDevelopmentFallback } = usePortfolioImages(category.id, "featured");
+  const { images, usingDevelopmentFallback, loadError } = usePortfolioImages(category.id, "featured");
   const label = categoryLabel(category.id, category.label);
 
   return (
@@ -31,7 +31,7 @@ export default function CategoryGalleryPage({ category }: CategoryGalleryPagePro
           {images.map((image) => <PortfolioImageTile key={image.id} image={image} />)}
         </section>
 
-        {images.length === 0 && <p className="mt-12 text-bone/60">{t("featuredSoon")}</p>}
+        {images.length === 0 && <p className="mt-12 text-bone/60">{t(loadError ? "portfolioUnavailable" : "featuredSoon")}</p>}
 
         <CategorySwitcher activeCategoryId={category.id} activeCategorySlug={category.slug} activeCategoryLabel={label} level="featured" />
       </div>

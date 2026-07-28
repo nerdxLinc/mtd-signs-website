@@ -6,11 +6,12 @@ import { addProjectFamilies, normalizeProjectKey } from "./projectFamilies";
 type PortfolioResponse = { images: PortfolioImage[]; source?: "cloudflare" | "development" };
 
 export function usePortfolioImages(categoryId?: string, status?: PortfolioStatus, coversOnly = false) {
-  const fallback = useMemo(() => addProjectFamilies(developmentPortfolioImages)
+  const fallback = useMemo(() => import.meta.env.DEV ? addProjectFamilies(developmentPortfolioImages)
     .filter((image) => (!categoryId || image.categoryId === categoryId) && (!status || image.status === status))
-    .sort((a, b) => a.rank - b.rank), [categoryId, status]);
+    .sort((a, b) => a.rank - b.rank) : [], [categoryId, status]);
   const [images, setImages] = useState<PortfolioImage[]>(fallback);
-  const [usingDevelopmentFallback, setUsingDevelopmentFallback] = useState(true);
+  const [usingDevelopmentFallback, setUsingDevelopmentFallback] = useState(import.meta.env.DEV);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     const search = new URLSearchParams();
@@ -24,25 +25,28 @@ export function usePortfolioImages(categoryId?: string, status?: PortfolioStatus
         if (!active) return;
         setImages(addProjectFamilies(response.images));
         setUsingDevelopmentFallback(response.source !== "cloudflare");
+        setLoadError(false);
       })
       .catch(() => {
         if (!active) return;
         setImages(fallback);
-        setUsingDevelopmentFallback(true);
+        setUsingDevelopmentFallback(import.meta.env.DEV);
+        setLoadError(true);
       });
     return () => { active = false; };
   }, [categoryId, coversOnly, fallback, status]);
 
-  return { images, usingDevelopmentFallback };
+  return { images, usingDevelopmentFallback, loadError };
 }
 
 export function useProjectImages(projectKey: string) {
   const normalizedKey = normalizeProjectKey(projectKey);
-  const fallback = useMemo(() => addProjectFamilies(developmentPortfolioImages)
+  const fallback = useMemo(() => import.meta.env.DEV ? addProjectFamilies(developmentPortfolioImages)
     .filter((image) => image.projectKey === normalizedKey)
-    .sort((a, b) => a.rank - b.rank), [normalizedKey]);
+    .sort((a, b) => a.rank - b.rank) : [], [normalizedKey]);
   const [images, setImages] = useState<PortfolioImage[]>(fallback);
-  const [usingDevelopmentFallback, setUsingDevelopmentFallback] = useState(true);
+  const [usingDevelopmentFallback, setUsingDevelopmentFallback] = useState(import.meta.env.DEV);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -52,16 +56,18 @@ export function useProjectImages(projectKey: string) {
         if (!active) return;
         setImages(addProjectFamilies(response.images));
         setUsingDevelopmentFallback(response.source !== "cloudflare");
+        setLoadError(false);
       })
       .catch(() => {
         if (!active) return;
         setImages(fallback);
-        setUsingDevelopmentFallback(true);
+        setUsingDevelopmentFallback(import.meta.env.DEV);
+        setLoadError(true);
       });
     return () => { active = false; };
   }, [fallback, normalizedKey]);
 
-  return { images, usingDevelopmentFallback };
+  return { images, usingDevelopmentFallback, loadError };
 }
 
 export function useActiveTestimonials() {

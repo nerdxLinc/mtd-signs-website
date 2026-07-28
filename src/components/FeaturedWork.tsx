@@ -20,9 +20,10 @@ export default function FeaturedWork() {
 
         <div className="featured-work-grid grid grid-cols-2 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {categories.map((category, index) => {
-            const categoryImages = images.filter((image) => image.categoryId === category.id && image.status === "featured" && !image.isHidden);
+            const categoryImages = images.filter((image) => image.categoryId === category.id && !image.isHidden);
             const cover = categoryImages.find((image) => image.isCategoryCover) ?? categoryImages[0];
-            return <CategoryCard key={category.id} category={category} coverImage={cover?.imageUrl ?? category.fallbackCoverImage} coverAlt={cover?.altText ?? `Development fallback cover for ${category.label}`} eager={index < 3} />;
+            if (!cover && !import.meta.env.DEV) return null;
+            return <CategoryCard key={category.id} category={category} coverImage={cover?.imageUrl ?? category.fallbackCoverImage} coverAlt={cover?.altText ?? category.label} eager={index < 3} />;
           })}
         </div>
       </div>

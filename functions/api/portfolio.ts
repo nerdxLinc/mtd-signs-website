@@ -42,7 +42,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   if (coversOnly) {
     const covers = new Map<string, typeof images[number]>();
-    for (const image of images.filter((item) => item.status === "featured").sort((first, second) => Number(second.isCategoryCover) - Number(first.isCategoryCover) || first.rank - second.rank)) {
+    for (const image of images.sort((first, second) =>
+      Number(second.isCategoryCover) - Number(first.isCategoryCover)
+      || Number(second.status === "featured") - Number(first.status === "featured")
+      || first.rank - second.rank)) {
       if (!covers.has(image.categoryId)) covers.set(image.categoryId, image);
     }
     return json({ source: "cloudflare", images: [...covers.values()] });
@@ -54,4 +57,3 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   images.sort((first, second) => first.rank - second.rank);
   return json({ source: "cloudflare", images });
 };
-

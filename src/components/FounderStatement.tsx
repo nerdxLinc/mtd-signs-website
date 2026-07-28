@@ -26,7 +26,7 @@ export default function FounderStatement() {
             className="relative max-w-md"
           >
             <p className="text-orange font-body font-bold text-xs tracking-[0.2em] mb-4">
-              SINCE 1994
+              {t("since1994")}
             </p>
             <h2 className="font-display font-semibold uppercase leading-[0.95] display-tight text-4xl sm:text-5xl">
               <span className="block text-bone">{t("thirtyYears")}</span>
@@ -42,7 +42,7 @@ export default function FounderStatement() {
             <div className="mt-8">
               <img
                 src={barrySignature}
-                alt="Barry Branscum signature"
+                alt={t("founderSignatureAlt")}
                 className="w-48 max-w-full mix-blend-screen invert opacity-90"
               />
               <p className="mt-2 font-body text-[11px] font-bold tracking-[0.16em] text-orange">
@@ -62,7 +62,7 @@ export default function FounderStatement() {
         >
           <img
             src={leonaKemperDentistSign}
-            alt="Barry Branscum applying dimensional letters to the Leona Kemper dental sign"
+            alt={t("founderPhotoAlt")}
             className="absolute inset-0 h-full w-full object-cover grayscale"
           />
         </motion.div>

@@ -17,6 +17,7 @@ import { useBrowserPath } from "./router";
 import { useEffect } from "react";
 import LanguageToggle from "./components/LanguageToggle";
 import { useTranslation } from "./lib/i18n";
+import SeoManager from "./components/SeoManager";
 
 function PublicPage({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -52,22 +53,24 @@ export default function App() {
   const category = workPath ? getWorkCategory(workPath.replace(/\/archive$/, "")) : undefined;
 
   if (path === "/work") {
-    return <WorkRedirect />;
+    return <><SeoManager path={path} /><WorkRedirect /></>;
   }
 
   if (projectKey && !projectKey.includes("/")) {
-    return <PublicPage><ProjectGalleryPage projectKey={projectKey} /></PublicPage>;
+    return <><SeoManager path={path} /><PublicPage><ProjectGalleryPage projectKey={projectKey} /></PublicPage></>;
   }
 
   if (category) {
-    return <PublicPage>{isArchive ? <CategoryArchivePage category={category} /> : <CategoryGalleryPage category={category} />}</PublicPage>;
+    return <><SeoManager path={path} /><PublicPage>{isArchive ? <CategoryArchivePage category={category} /> : <CategoryGalleryPage category={category} />}</PublicPage></>;
   }
 
   if (path === "/admin") {
-    return <AdminPage />;
+    return <><SeoManager path={path} /><AdminPage /></>;
   }
 
   return (
+    <>
+    <SeoManager path={path} />
     <PublicPage>
       <main>
         <Hero />
@@ -92,5 +95,6 @@ export default function App() {
       </main>
       <Footer />
     </PublicPage>
+    </>
   );
 }
