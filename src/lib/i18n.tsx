@@ -59,6 +59,8 @@ const copy = {
     seeMoreWork: "See More Work Like This",
     viewFeatured: "View Featured",
     seeMoreProject: "See more from this project",
+    enlargeImage: "View larger image",
+    closeImage: "Close image",
     categoryNavigation: "Continue exploring portfolio work",
     categorySwitch: "Switch portfolio category",
     categories: {
@@ -134,6 +136,8 @@ const copy = {
     seeMoreWork: "Ver Mas Trabajo Como Este",
     viewFeatured: "Ver Destacados",
     seeMoreProject: "Ver mas de este proyecto",
+    enlargeImage: "Ver imagen ampliada",
+    closeImage: "Cerrar imagen",
     categoryNavigation: "Seguir explorando el portafolio",
     categorySwitch: "Cambiar categoria del portafolio",
     categories: {
@@ -194,3 +198,4 @@ export function useTranslation() {
   if (!context) throw new Error("useTranslation must be used inside LanguageProvider");
   return context;
 }
+
