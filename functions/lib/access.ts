@@ -1,6 +1,9 @@
 export type Env = {
   DB: D1Database;
   PORTFOLIO_BUCKET: R2Bucket;
+  ASSETS: {
+    fetch(input: Request | string | URL, init?: RequestInit): Promise<Response>;
+  };
   EMAIL?: {
     send(message: {
       to: string | { email: string; name?: string };
