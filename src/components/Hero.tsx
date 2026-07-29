@@ -85,7 +85,7 @@ export default function Hero() {
             {t("whatWeDo")} <ArrowRight size={16} aria-hidden="true" />
           </a>
           <a href="#contact" className="mtd-hero__secondary-action">
-            {t("startProject")} <ArrowRight size={16} aria-hidden="true" />
+            {t("startProject")} <ArrowRight size={16} className="text-blue" aria-hidden="true" />
           </a>
         </div>
       </div>

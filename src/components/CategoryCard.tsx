@@ -29,7 +29,7 @@ export default function CategoryCard({ category, coverImage, coverAlt, eager = f
         <span className="block max-w-[18rem] font-display text-lg font-semibold uppercase leading-[0.95] text-bone sm:text-3xl">
           {label}
         </span>
-        <span className="mt-2 block h-px w-10 bg-orange transition-[width] duration-300 motion-reduce:transition-none sm:mt-3 sm:w-12 sm:group-hover:w-20" aria-hidden="true" />
+        <span className="mt-2 block h-px w-10 bg-blue transition-[width] duration-300 motion-reduce:transition-none sm:mt-3 sm:w-12 sm:group-hover:w-20" aria-hidden="true" />
       </span>
     </RouterLink>
   );

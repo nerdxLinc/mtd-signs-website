@@ -8,7 +8,7 @@ export default function Footer() {
         <p className="text-bone/50">
           © {new Date().getFullYear()} MTD Signs & Graphics. {t("allRights")}
         </p>
-        <a href="#top" className="text-bone/70 transition-colors hover:text-orange">
+        <a href="#top" className="text-bone/70 transition-colors hover:text-blue">
           {t("backToTop")}
         </a>
       </div>

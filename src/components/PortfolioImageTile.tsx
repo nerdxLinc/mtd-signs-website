@@ -39,8 +39,8 @@ export default function PortfolioImageTile({ image, showProjectLink = true, cate
         <figcaption className="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-1 pt-2 text-xs font-bold uppercase tracking-[0.1em]">
           {categoryLabel && <span className="text-bone/45">{categoryLabel}</span>}
           {hasProjectFamily && (
-            <RouterLink to={`/projects/${image.projectKey}`} className="inline-flex min-h-9 items-center gap-1.5 text-bone/60 transition-colors hover:text-orange focus-visible:text-orange">
-              {t("seeMoreProject")} <ArrowRight size={13} aria-hidden="true" />
+            <RouterLink to={`/projects/${image.projectKey}`} className="inline-flex min-h-9 items-center gap-1.5 text-bone/60 transition-colors hover:text-blue focus-visible:text-blue">
+              {t("seeMoreProject")} <ArrowRight size={13} className="text-blue" aria-hidden="true" />
             </RouterLink>
           )}
         </figcaption>

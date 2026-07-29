@@ -31,7 +31,7 @@ export default function ProcessTimeline() {
           <h2 className="font-display font-semibold uppercase text-2xl sm:text-3xl text-bone">
             How We Work
           </h2>
-          <span className="h-px w-16 bg-orange" />
+          <span className="h-px w-16 bg-blue" />
         </div>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4">

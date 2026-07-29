@@ -16,12 +16,12 @@ export default function ProjectGalleryPage({ projectKey }: ProjectGalleryPagePro
     <main className="min-h-screen bg-ink px-5 py-8 sm:px-8 lg:py-12">
       <div className="mx-auto max-w-[1400px]">
         <div className="flex flex-wrap items-center justify-between gap-5 border-b border-line pb-6">
-          <a href="/#work" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange"><ArrowLeft size={16} aria-hidden="true" /> {t("backToWork")}</a>
-          <a href="/#contact" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange">{t("startProject")} <ArrowRight size={16} aria-hidden="true" /></a>
+          <a href="/#work" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-blue"><ArrowLeft size={16} className="text-blue" aria-hidden="true" /> {t("backToWork")}</a>
+          <a href="/#contact" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-blue">{t("startProject")} <ArrowRight size={16} className="text-blue" aria-hidden="true" /></a>
         </div>
 
         <header className="mt-14 max-w-3xl sm:mt-20">
-          <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-orange">{t("project")}</p>
+          <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-blue">{t("project")}</p>
           <h1 className="mt-4 font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">{projectLabel}</h1>
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>

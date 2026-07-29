@@ -18,11 +18,11 @@ export default function CategorySwitcher({ activeCategoryId, level, activeCatego
     <nav className="mt-12 border-t border-line pt-6" aria-label={t("categoryNavigation")}>
       <p className="font-body text-sm font-bold uppercase tracking-wide text-bone">
         {isArchive ? (
-          <RouterLink className="transition-colors hover:text-orange focus-visible:text-orange" to={`/work/${activeCategorySlug}`}>
+          <RouterLink className="transition-colors hover:text-blue focus-visible:text-blue" to={`/work/${activeCategorySlug}`}>
             {t("viewFeatured")} {categoryLabel(activeCategoryId, activeCategoryLabel)}
           </RouterLink>
         ) : (
-          <RouterLink className="transition-colors hover:text-orange focus-visible:text-orange" to={`/work/${activeCategorySlug}/archive`}>
+          <RouterLink className="transition-colors hover:text-blue focus-visible:text-blue" to={`/work/${activeCategorySlug}/archive`}>
             {t("seeMoreWork")}
           </RouterLink>
         )}
@@ -32,7 +32,7 @@ export default function CategorySwitcher({ activeCategoryId, level, activeCatego
           <span key={category.id}>
             {index > 0 && <span className="px-0.5 text-bone/25" aria-hidden="true">|</span>}
             {category.id === activeCategoryId ? (
-              <span className="inline-flex min-h-11 items-center px-1.5 font-semibold text-orange" aria-current="page">{categoryLabel(category.id, category.label, true)}</span>
+              <span className="inline-flex min-h-11 items-center px-1.5 font-semibold text-blue" aria-current="page">{categoryLabel(category.id, category.label, true)}</span>
             ) : (
               <RouterLink className="inline-flex min-h-11 items-center px-1.5 transition-colors hover:text-bone focus-visible:text-bone" to={`/work/${category.slug}${isArchive ? "/archive" : ""}`}>
                 {categoryLabel(category.id, category.label, true)}

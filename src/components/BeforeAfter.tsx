@@ -38,8 +38,8 @@ export default function BeforeAfter() {
         </motion.div>
 
         {/* Center arrow, marking the transformation */}
-        <div className="absolute left-1/2 top-1/2 z-10 hidden h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center border-4 border-ink bg-orange md:flex">
-          <ArrowRight size={28} className="text-ink" />
+        <div className="absolute left-1/2 top-1/2 z-10 hidden h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center border-4 border-ink bg-blue md:flex">
+          <ArrowRight size={28} className="text-bone" />
         </div>
       </div>
 

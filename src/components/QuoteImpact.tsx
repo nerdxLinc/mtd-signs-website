@@ -63,7 +63,7 @@ export default function QuoteImpact() {
       }}
     >
       <div className="relative mx-auto max-w-3xl">
-        <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-orange">{t("whatClientsSay")}</p>
+        <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-blue">{t("whatClientsSay")}</p>
         <figure className="mt-7 grid min-h-[13rem] sm:min-h-[11rem]">
           {testimonials.map((testimonial, testimonialIndex) => {
             const isActive = testimonialIndex === index % testimonials.length;
@@ -83,9 +83,9 @@ export default function QuoteImpact() {
           })}
         </figure>
         {testimonials.length > 1 && <div className="mt-7 flex items-center gap-4">
-          <button type="button" onClick={() => move(-1)} onPointerUp={(event) => { if (event.pointerType !== "mouse") event.currentTarget.blur(); }} aria-label={t("previousTestimonial")} className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center border border-line text-bone transition-colors hover:border-orange hover:text-orange"><ChevronLeft size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={() => move(-1)} onPointerUp={(event) => { if (event.pointerType !== "mouse") event.currentTarget.blur(); }} aria-label={t("previousTestimonial")} className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center border border-line text-blue transition-colors hover:border-blue hover:bg-blue/10"><ChevronLeft size={18} aria-hidden="true" /></button>
           <span className="min-w-14 text-center text-xs font-bold tabular-nums tracking-[0.14em] text-bone/50" aria-live="polite">{index + 1} / {testimonials.length}</span>
-          <button type="button" onClick={() => move(1)} onPointerUp={(event) => { if (event.pointerType !== "mouse") event.currentTarget.blur(); }} aria-label={t("nextTestimonial")} className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center border border-line text-bone transition-colors hover:border-orange hover:text-orange"><ChevronRight size={18} aria-hidden="true" /></button>
+          <button type="button" onClick={() => move(1)} onPointerUp={(event) => { if (event.pointerType !== "mouse") event.currentTarget.blur(); }} aria-label={t("nextTestimonial")} className="inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center border border-line text-blue transition-colors hover:border-blue hover:bg-blue/10"><ChevronRight size={18} aria-hidden="true" /></button>
         </div>}
       </div>
     </section>

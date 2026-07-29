@@ -14,7 +14,7 @@ export default function FeaturedWork() {
         <div className="mb-10 flex items-end gap-6">
           <div className="flex items-center gap-4">
             <h2 id="featured-work-heading" className="font-display text-2xl font-semibold uppercase text-bone sm:text-3xl">{t("featuredWork")}</h2>
-            <span className="h-px w-16 bg-orange" aria-hidden="true" />
+            <span className="h-px w-16 bg-blue" aria-hidden="true" />
           </div>
         </div>
 

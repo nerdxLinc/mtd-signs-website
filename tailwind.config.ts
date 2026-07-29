@@ -14,7 +14,7 @@ export default {
           dim: "#c85601",
         },
         blue: {
-          DEFAULT: "#0422b6",
+          DEFAULT: "#4c70eb",
         },
         skyline: "#3ebbff",
         bone: "#f2f0ec",
