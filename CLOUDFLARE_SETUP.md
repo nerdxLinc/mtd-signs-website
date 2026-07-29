@@ -4,7 +4,7 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
 
 1. Create a Cloudflare R2 bucket for portfolio images. Copy its exact bucket name into the `PORTFOLIO_BUCKET` binding in Pages.
 2. Create a Cloudflare D1 database. Copy its exact name and database ID into `wrangler.example.toml` after renaming it to `wrangler.toml`, or add the same `DB` binding in the Pages dashboard.
-3. Apply all migrations, in order. The first creates the portfolio records; the second adds the browser-side ZIP import batches, source-record logs, duplicate reviews, and progress counters; the third adds automatic project-family metadata; the fourth publishes previously reviewed Archive records; and the fifth adds durable contact inquiries.
+3. Apply all migrations, in order. The first creates the portfolio records; the second adds the browser-side ZIP import batches, source-record logs, duplicate reviews, and progress counters; the third adds automatic project-family metadata; the fourth publishes previously reviewed Archive records; the fifth adds durable contact inquiries; and the sixth and seventh keep homepage-only presentation assets out of public portfolio listings.
 
    ```bash
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0001_portfolio_admin.sql
@@ -12,6 +12,8 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0003_project_families.sql
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0004_publish_archive_images.sql
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0005_contact_submissions.sql
+   npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0006_hide_homepage_only_assets.sql
+   npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0007_hide_homepage_process_assets.sql
    ```
 4. Deploy the site as a Cloudflare Pages project using `npm run build` and `dist` as the build output. The included `_redirects` file keeps direct public routes working.
 5. Add the two storage bindings to Pages Functions exactly as named: `DB` for D1 and `PORTFOLIO_BUCKET` for R2. Do not use placeholder values in a deployment.

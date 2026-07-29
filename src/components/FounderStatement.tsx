@@ -1,6 +1,6 @@
 import { motion } from "framer-motion";
 import barrySignature from "../assets/barry-signature.png";
-import leonaKemperDentistSign from "../assets/leona-kemper-dentist-sign.jpg";
+import leonaKemperDentistSign from "../assets/homepage/leona-kemper-dentist-sign.jpg";
 import { useTranslation } from "../lib/i18n";
 
 export default function FounderStatement() {

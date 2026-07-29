@@ -1,9 +1,15 @@
 import { type Env } from "../lib/access";
+import { isHomepageOnlyAsset } from "../lib/homepageAssets";
+
+async function publicImageRow(env: Env, id: string) {
+  const row: any = await env.DB.prepare("SELECT r2_key, content_type, source_filename FROM portfolio_images WHERE id = ? AND is_hidden = 0").bind(id).first();
+  return row && !isHomepageOnlyAsset(row.source_filename) ? row : null;
+}
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return new Response("Missing image id", { status: 400 });
-  const row: any = await env.DB.prepare("SELECT r2_key, content_type FROM portfolio_images WHERE id = ? AND is_hidden = 0").bind(id).first();
+  const row = await publicImageRow(env, id);
   if (!row) return new Response("Not found", { status: 404 });
   const object = await env.PORTFOLIO_BUCKET.get(row.r2_key);
   if (!object) return new Response("Not found", { status: 404 });
@@ -13,7 +19,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 export const onRequestHead: PagesFunction<Env> = async ({ request, env }) => {
   const id = new URL(request.url).searchParams.get("id");
   if (!id) return new Response(null, { status: 400 });
-  const row: any = await env.DB.prepare("SELECT r2_key, content_type FROM portfolio_images WHERE id = ? AND is_hidden = 0").bind(id).first();
+  const row = await publicImageRow(env, id);
   if (!row) return new Response(null, { status: 404 });
   const object = await env.PORTFOLIO_BUCKET.head(row.r2_key);
   if (!object) return new Response(null, { status: 404 });

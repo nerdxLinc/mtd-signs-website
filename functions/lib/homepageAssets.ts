@@ -4,6 +4,14 @@ const homepageOnlyFilenames = new Set([
   "barry-signature.png",
   "before van(1).jpg",
   "before-truck.jpg",
+  "founder-shop.jpg",
+  "leona-kemper-dentist-sign.jpg",
+  "problem-install.jpg",
+  "problem-shop.jpg",
+  "problem-sketch.jpg",
+  "process-blue.jpg",
+  "process-grey.jpg",
+  "process-orange.jpg",
 ]);
 
 export function isHomepageOnlyAsset(filename: unknown) {

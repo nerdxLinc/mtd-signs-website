@@ -1,8 +1,14 @@
 import { motion } from "framer-motion";
-import problemSketch from "../assets/problem-sketch.jpg";
-import problemShop from "../assets/problem-shop.jpg";
-import problemInstall from "../assets/problem-install.jpg";
+import processBlue from "../assets/homepage/process-blue.jpg";
+import processGrey from "../assets/homepage/process-grey.jpg";
+import processOrange from "../assets/homepage/process-orange.jpg";
 import { useTranslation } from "../lib/i18n";
+
+const processImages = [
+  { src: processBlue, objectPosition: "58% center" },
+  { src: processGrey, objectPosition: "57% center" },
+  { src: processOrange, objectPosition: "33% center" },
+];
 
 export default function ProblemSolving() {
   const { t } = useTranslation();
@@ -33,12 +39,13 @@ export default function ProblemSolving() {
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
           className="grid grid-cols-3 gap-3"
         >
-          {[problemSketch, problemShop, problemInstall].map((src, i) => (
-            <div key={i} className="relative aspect-[3/4] overflow-hidden group">
+          {processImages.map(({ src, objectPosition }) => (
+            <div key={src} className="relative aspect-[3/4] overflow-hidden group">
               <img
                 src={src}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover grayscale transition-transform duration-500 group-hover:scale-105"
+                style={{ objectPosition }}
+                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             </div>
           ))}
