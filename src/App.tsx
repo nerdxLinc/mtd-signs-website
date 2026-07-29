@@ -18,6 +18,7 @@ import { useEffect } from "react";
 import LanguageToggle from "./components/LanguageToggle";
 import { useTranslation } from "./lib/i18n";
 import SeoManager from "./components/SeoManager";
+import NotFoundPage from "./pages/NotFoundPage";
 
 function PublicPage({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -51,6 +52,11 @@ export default function App() {
   const projectKey = path.startsWith("/projects/") ? path.replace("/projects/", "") : "";
   const isArchive = workPath.endsWith("/archive");
   const category = workPath ? getWorkCategory(workPath.replace(/\/archive$/, "")) : undefined;
+  const serverRouteNotFound = document.head.querySelector<HTMLMetaElement>('meta[name="mtd-route-status"]')?.content === "404";
+
+  if (serverRouteNotFound) {
+    return <><SeoManager path={path} notFound /><PublicPage><NotFoundPage /></PublicPage></>;
+  }
 
   if (path === "/work") {
     return <><SeoManager path={path} /><WorkRedirect /></>;
@@ -66,6 +72,10 @@ export default function App() {
 
   if (path === "/admin") {
     return <><SeoManager path={path} /><AdminPage /></>;
+  }
+
+  if (path !== "/") {
+    return <><SeoManager path={path} notFound /><PublicPage><NotFoundPage /></PublicPage></>;
   }
 
   return (
