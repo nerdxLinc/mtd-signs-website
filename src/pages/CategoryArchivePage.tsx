@@ -9,9 +9,10 @@ import { useTranslation } from "../lib/i18n";
 type CategoryArchivePageProps = { category: WorkCategory };
 
 export default function CategoryArchivePage({ category }: CategoryArchivePageProps) {
-  const { categoryLabel, t } = useTranslation();
+  const { categoryDescription, categoryLabel, t } = useTranslation();
   const { images, usingDevelopmentFallback, loadError } = usePortfolioImages(category.id, "archive");
   const label = categoryLabel(category.id, category.label);
+  const description = categoryDescription(category.id, category.description);
   const title = `${label} ${t("archive")}`;
   return (
     <main className="min-h-screen bg-ink px-5 py-8 sm:px-8 lg:py-12">
@@ -25,6 +26,7 @@ export default function CategoryArchivePage({ category }: CategoryArchivePagePro
         </div>
         <header className="mt-14 max-w-3xl sm:mt-20">
           <h1 className="font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">{title}</h1>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-bone/70 sm:text-lg">{description}</p>
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>
         <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${title} ${t("archiveImages")}`}>
