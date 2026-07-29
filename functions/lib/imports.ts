@@ -1,6 +1,7 @@
 import { adminImageUrl, contentTypeFor, imageDimensions, sha256, type Env } from "./access";
 export { likelySameName } from "./duplicateNames";
 import { likelySameName } from "./duplicateNames";
+import { isHomepageOnlyAsset } from "./homepageAssets";
 import { projectFamilyFromFilename } from "./projects";
 
 export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
@@ -38,9 +39,11 @@ export async function upsertImportItem(env: Env, values: { importId: string; sou
 export async function insertPortfolioImage(env: Env, values: { id?: string; categoryId: string; filename: string; sourceZip: string; contentType: string; hash: string; size: number; width: number | null; height: number | null; importId: string; r2Key: string; hidden?: boolean }) {
   const id = values.id ?? crypto.randomUUID();
   const project = projectFamilyFromFilename(values.filename);
+  const hidden = values.hidden || isHomepageOnlyAsset(values.filename);
   // Normal imports are immediately available in More Work. A potential
-  // duplicate is the one exception: it remains hidden until reviewed.
-  await env.DB.prepare("INSERT INTO portfolio_images (id, category_id, status, display_rank, is_category_cover, is_hidden, r2_key, source_filename, source_zip, content_type, content_hash, source_size, width, height, alt_text, import_id, project_key, project_label) VALUES (?, ?, 'archive', 100, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(id, values.categoryId, values.hidden ? 1 : 0, values.r2Key, values.filename, values.sourceZip, values.contentType, values.hash, values.size, values.width, values.height, values.filename.replace(/[-_]+/g, " ").replace(/\.[^.]+$/, ""), values.importId, project?.key ?? null, project?.label ?? null).run();
+  // duplicate is the normal exception. Homepage-only presentation assets also
+  // remain hidden if they are ever selected in the portfolio importer.
+  await env.DB.prepare("INSERT INTO portfolio_images (id, category_id, status, display_rank, is_category_cover, is_hidden, r2_key, source_filename, source_zip, content_type, content_hash, source_size, width, height, alt_text, import_id, project_key, project_label) VALUES (?, ?, 'archive', 100, 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(id, values.categoryId, hidden ? 1 : 0, values.r2Key, values.filename, values.sourceZip, values.contentType, values.hash, values.size, values.width, values.height, values.filename.replace(/[-_]+/g, " ").replace(/\.[^.]+$/, ""), values.importId, project?.key ?? null, project?.label ?? null).run();
   return id;
 }
 
