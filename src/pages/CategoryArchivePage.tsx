@@ -18,10 +18,10 @@ export default function CategoryArchivePage({ category }: CategoryArchivePagePro
       <div className="mx-auto max-w-[1400px]">
         <div className="flex flex-wrap items-center justify-between gap-5 border-b border-line pb-6">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-            <a href="/" className="font-body text-sm font-bold uppercase tracking-wide text-bone/70 transition-colors hover:text-orange">{t("home")}</a>
-            <RouterLink to={`/work/${category.slug}`} className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange"><ArrowLeft size={16} aria-hidden="true" /> {t("backToFeatured")} {label}</RouterLink>
+            <a href="/" className="font-body text-sm font-bold uppercase tracking-wide text-bone/70 transition-colors hover:text-blue">{t("home")}</a>
+            <RouterLink to={`/work/${category.slug}`} className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-blue"><ArrowLeft size={16} className="text-blue" aria-hidden="true" /> {t("backToFeatured")} {label}</RouterLink>
           </div>
-          <a href="/#contact" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-orange">{t("startProject")} <ArrowRight size={16} aria-hidden="true" /></a>
+          <a href="/#contact" className="inline-flex items-center gap-2 font-body text-sm font-bold uppercase tracking-wide text-bone transition-colors hover:text-blue">{t("startProject")} <ArrowRight size={16} className="text-blue" aria-hidden="true" /></a>
         </div>
         <header className="mt-14 max-w-3xl sm:mt-20">
           <h1 className="font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">{title}</h1>

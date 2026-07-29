@@ -56,7 +56,7 @@ a {
 
 .language-toggle button:hover,
 .language-toggle button.is-active {
-  color: #ff6d01;
+  color: #4c70eb;
 }
 
 ::selection {
@@ -68,7 +68,7 @@ a:focus-visible,
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #ff6d01;
+  outline: 2px solid #4c70eb;
   outline-offset: 3px;
 }
 
@@ -257,7 +257,7 @@ textarea:focus-visible {
 }
 
 .mtd-hero__secondary-action:hover {
-  color: #ff6d01;
+  color: #4c70eb;
 }
 
 @media (max-width: 960px) {

@@ -84,7 +84,7 @@ export default function App() {
               <span className="block">{t("differenceThe")}</span>
               <span className="block text-orange">{t("differenceWord")}</span>
             </h2>
-            <span className="mt-5 block h-px w-20 bg-orange" />
+            <span className="mt-5 block h-px w-20 bg-blue" />
             <p className="mt-6 max-w-2xl text-base leading-relaxed text-bone/70 sm:text-lg">
               {t("differenceCopy")}
             </p>

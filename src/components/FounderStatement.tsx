@@ -25,7 +25,7 @@ export default function FounderStatement() {
             transition={{ duration: 0.6, ease: "easeOut" }}
             className="relative max-w-md"
           >
-            <p className="text-orange font-body font-bold text-xs tracking-[0.2em] mb-4">
+            <p className="text-blue font-body font-bold text-xs tracking-[0.2em] mb-4">
               {t("since1994")}
             </p>
             <h2 className="font-display font-semibold uppercase leading-[0.95] display-tight text-4xl sm:text-5xl">
@@ -45,7 +45,7 @@ export default function FounderStatement() {
                 alt={t("founderSignatureAlt")}
                 className="w-48 max-w-full mix-blend-screen invert opacity-90"
               />
-              <p className="mt-2 font-body text-[11px] font-bold tracking-[0.16em] text-orange">
+              <p className="mt-2 font-body text-[11px] font-bold tracking-[0.16em] text-blue">
                 {t("ownerDesigner")}
               </p>
             </div>

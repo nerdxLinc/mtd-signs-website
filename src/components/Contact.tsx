@@ -52,26 +52,26 @@ export default function Contact() {
             <span className="block text-bone">{t("readyWhen")}</span>
             <span className="block text-orange">{t("youAre")}</span>
           </h2>
-          <span className="block mt-4 h-px w-20 bg-orange" />
+          <span className="block mt-4 h-px w-20 bg-blue" />
 
           <ul className="mt-10 space-y-4 text-bone/85 text-base">
             <li className="flex items-center gap-3">
-              <Phone size={18} className="text-orange shrink-0" />
-              <a href="tel:5013291111" className="hover:text-orange transition-colors">
+              <Phone size={18} className="text-blue shrink-0" />
+              <a href="tel:5013291111" className="hover:text-blue transition-colors">
                 501.329.1111
               </a>
             </li>
             <li className="flex items-center gap-3">
-              <Mail size={18} className="text-orange shrink-0" />
+              <Mail size={18} className="text-blue shrink-0" />
               <a
                 href="mailto:mtdsigns@gmail.com"
-                className="hover:text-orange transition-colors"
+                className="hover:text-blue transition-colors"
               >
                 mtdsigns@gmail.com
               </a>
             </li>
             <li className="flex items-start gap-3">
-              <MapPin size={18} className="text-orange shrink-0 mt-0.5" />
+              <MapPin size={18} className="text-blue shrink-0 mt-0.5" />
               <span>
                 166 Hwy 310
                 <br />
@@ -88,7 +88,7 @@ export default function Contact() {
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
         >
           {status === "received" ? (
-            <div className="border border-orange/40 bg-charcoal2 px-6 py-8">
+            <div className="border border-blue/50 bg-charcoal2 px-6 py-8">
               <p className="font-display uppercase text-xl text-bone">
                 {t("messageSent")}
               </p>
@@ -105,7 +105,7 @@ export default function Contact() {
                 required
                 type="text"
                 placeholder={t("name")}
-                className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
+                className="bg-transparent border border-line focus:border-blue px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <input
                 name="email"
@@ -114,7 +114,7 @@ export default function Contact() {
                 required
                 type="email"
                 placeholder={t("email")}
-                className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
+                className="bg-transparent border border-line focus:border-blue px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <input
                 name="phone"
@@ -122,14 +122,14 @@ export default function Contact() {
                 autoComplete="tel"
                 type="tel"
                 placeholder={t("phone")}
-                className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
+                className="bg-transparent border border-line focus:border-blue px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors"
               />
               <textarea
                 name="projectDetails"
                 aria-label={t("projectDetails")}
                 placeholder={t("projectDetails")}
                 rows={4}
-                className="bg-transparent border border-line focus:border-orange px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors sm:row-span-2"
+                className="bg-transparent border border-line focus:border-blue px-4 py-3 text-sm text-bone placeholder:text-bone/40 outline-none transition-colors sm:row-span-2"
               />
               <label className="absolute -left-[10000px] h-px w-px overflow-hidden" aria-hidden="true">
                 Website
