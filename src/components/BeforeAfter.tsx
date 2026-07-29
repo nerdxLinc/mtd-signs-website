@@ -8,18 +8,18 @@ export default function BeforeAfter() {
   const { t } = useTranslation();
   return (
     <section className="bg-ink">
-      <div className="relative grid grid-cols-2">
+      <div className="relative grid grid-cols-2 gap-3 sm:gap-4 lg:gap-5">
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="relative h-[280px] sm:h-[420px] overflow-hidden"
+          className="relative aspect-[128/57] min-w-0 overflow-hidden bg-charcoal2"
         >
           <img
             src={beforeTruck}
             alt={t("beforeTruckAlt")}
-            className="h-full w-full object-cover grayscale-[30%]"
+            className="block h-full w-full object-contain grayscale-[30%]"
           />
         </motion.div>
 
@@ -28,22 +28,22 @@ export default function BeforeAfter() {
           whileInView={{ opacity: 1 }}
           viewport={{ once: true, margin: "-80px" }}
           transition={{ duration: 0.6, delay: 0.15, ease: "easeOut" }}
-          className="relative h-[280px] sm:h-[420px] overflow-hidden"
+          className="relative aspect-[128/57] min-w-0 overflow-hidden bg-charcoal2"
         >
           <img
             src={afterTruck}
             alt={t("afterTruckAlt")}
-            className="h-full w-full object-cover"
+            className="block h-full w-full object-contain"
           />
         </motion.div>
 
         {/* Center arrow, marking the transformation */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-10 hidden sm:flex h-16 w-16 items-center justify-center bg-orange">
+        <div className="absolute left-1/2 top-1/2 z-10 hidden h-14 w-14 -translate-x-1/2 -translate-y-1/2 items-center justify-center border-4 border-ink bg-orange md:flex">
           <ArrowRight size={28} className="text-ink" />
         </div>
       </div>
 
-      <div className="bg-ink px-5 sm:px-8 py-6 text-center sm:text-left sm:px-12">
+      <div className="bg-ink px-4 py-6 text-center sm:px-8 sm:text-left lg:px-12">
         <p className="font-display font-semibold uppercase text-xl sm:text-2xl">
           <span className="text-bone">{t("sameTruck")} </span>
           <span className="text-orange">{t("differentBusiness")}</span>
