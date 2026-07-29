@@ -1,3 +1,4 @@
+# Canonical site: https://www.mtdsigns.com
 User-agent: *
 Allow: /
 Disallow: /admin
