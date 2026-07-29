@@ -9,9 +9,10 @@ import { useTranslation } from "../lib/i18n";
 type CategoryGalleryPageProps = { category: WorkCategory };
 
 export default function CategoryGalleryPage({ category }: CategoryGalleryPageProps) {
-  const { categoryLabel, t } = useTranslation();
+  const { categoryDescription, categoryLabel, t } = useTranslation();
   const { images, usingDevelopmentFallback, loadError } = usePortfolioImages(category.id, "featured");
   const label = categoryLabel(category.id, category.label);
+  const description = categoryDescription(category.id, category.description);
 
   return (
     <main className="min-h-screen bg-ink px-5 py-8 sm:px-8 lg:py-12">
@@ -24,6 +25,7 @@ export default function CategoryGalleryPage({ category }: CategoryGalleryPagePro
         <header className="mt-14 max-w-3xl sm:mt-20">
           <p className="font-body text-xs font-bold uppercase tracking-[0.18em] text-blue">{t("featured")} {label}</p>
           <h1 className="mt-4 font-display text-5xl font-semibold uppercase leading-[0.9] text-bone sm:text-7xl">{label}</h1>
+          <p className="mt-6 max-w-2xl text-base leading-relaxed text-bone/70 sm:text-lg">{description}</p>
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>
 
