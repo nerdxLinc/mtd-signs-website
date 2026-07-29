@@ -5,6 +5,11 @@ import workChiropractic from "../assets/work-chiropractic.jpg";
 import workConwayPd from "../assets/work-conwaypd.jpg";
 import workDentist from "../assets/work-dentist.jpg";
 import type { WorkCategory } from "../types/portfolio";
+import { getSeoCategory } from "./seoCategories";
+
+function seoDescription(slug: string) {
+  return getSeoCategory(slug)?.description ?? "";
+}
 
 // Temporary covers use the strongest available source images. They are intentionally
 // centralized so curated archive imagery can replace them without changing layouts.
@@ -14,7 +19,7 @@ export const workCategories: WorkCategory[] = [
     slug: "vehicle-wraps-fleet-graphics",
     label: "Vehicle Wraps & Fleet Graphics",
     fallbackCoverImage: workBigRock,
-    description: "Vehicle graphics and fleet applications.",
+    description: seoDescription("vehicle-wraps-fleet-graphics"),
     displayOrder: 1,
   },
   {
@@ -22,7 +27,7 @@ export const workCategories: WorkCategory[] = [
     slug: "logo-identity-design",
     label: "Logo & Identity Design",
     fallbackCoverImage: workCarlsonGracie,
-    description: "Identity work and applied brand marks.",
+    description: seoDescription("logo-identity-design"),
     displayOrder: 2,
   },
   {
@@ -30,7 +35,7 @@ export const workCategories: WorkCategory[] = [
     slug: "commercial-branding",
     label: "Commercial Signage",
     fallbackCoverImage: workCmg,
-    description: "Commercial graphics, signage, and branded environments.",
+    description: seoDescription("commercial-branding"),
     displayOrder: 3,
   },
   {
@@ -38,7 +43,7 @@ export const workCategories: WorkCategory[] = [
     slug: "church-ministry-graphics",
     label: "Church & Ministry Graphics",
     fallbackCoverImage: workChiropractic,
-    description: "A temporary category cover for ministry-focused work.",
+    description: seoDescription("church-ministry-graphics"),
     displayOrder: 5,
   },
   {
@@ -46,7 +51,7 @@ export const workCategories: WorkCategory[] = [
     slug: "public-safety-graphics",
     label: "Public Safety Graphics",
     fallbackCoverImage: workConwayPd,
-    description: "Public-safety and civic vehicle graphics.",
+    description: seoDescription("public-safety-graphics"),
     displayOrder: 4,
   },
   {
@@ -54,7 +59,7 @@ export const workCategories: WorkCategory[] = [
     slug: "specialty-projects",
     label: "Specialty Projects",
     fallbackCoverImage: workDentist,
-    description: "Special-format work beyond a single category.",
+    description: seoDescription("specialty-projects"),
     displayOrder: 6,
   },
 ];
