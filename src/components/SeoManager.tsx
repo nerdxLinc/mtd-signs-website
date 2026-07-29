@@ -4,7 +4,8 @@ import { useTranslation } from "../lib/i18n";
 import { projectLabelFromKey } from "../lib/projectFamilies";
 
 const SITE_URL = "https://www.mtdsigns.com";
-const DEFAULT_IMAGE = `${SITE_URL}/mtd-signs-social-preview.jpg`;
+const DEFAULT_IMAGE = `${SITE_URL}/mtd-signs-social-preview-v2.jpg`;
+const DEFAULT_IMAGE_ALT = "MTD Signs & Graphics hero featuring a custom flame-wrapped Chevrolet truck and the message First Impressions Matter.";
 
 function setMeta(selector: string, attributes: Record<string, string>, content: string) {
   let element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -107,9 +108,11 @@ export default function SeoManager({ path }: { path: string }) {
     setMeta('meta[property="og:description"]', { property: "og:description" }, metadata.description);
     setMeta('meta[property="og:url"]', { property: "og:url" }, metadata.canonical);
     setMeta('meta[property="og:image"]', { property: "og:image" }, DEFAULT_IMAGE);
+    setMeta('meta[property="og:image:secure_url"]', { property: "og:image:secure_url" }, DEFAULT_IMAGE);
     setMeta('meta[property="og:image:type"]', { property: "og:image:type" }, "image/jpeg");
-    setMeta('meta[property="og:image:width"]', { property: "og:image:width" }, "1185");
-    setMeta('meta[property="og:image:height"]', { property: "og:image:height" }, "622");
+    setMeta('meta[property="og:image:width"]', { property: "og:image:width" }, "1200");
+    setMeta('meta[property="og:image:height"]', { property: "og:image:height" }, "630");
+    setMeta('meta[property="og:image:alt"]', { property: "og:image:alt" }, DEFAULT_IMAGE_ALT);
     setMeta('meta[property="og:type"]', { property: "og:type" }, "website");
     setMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "MTD Signs & Graphics");
     setMeta('meta[property="og:locale"]', { property: "og:locale" }, language === "es" ? "es_US" : "en_US");
@@ -117,6 +120,7 @@ export default function SeoManager({ path }: { path: string }) {
     setMeta('meta[name="twitter:title"]', { name: "twitter:title" }, metadata.title);
     setMeta('meta[name="twitter:description"]', { name: "twitter:description" }, metadata.description);
     setMeta('meta[name="twitter:image"]', { name: "twitter:image" }, DEFAULT_IMAGE);
+    setMeta('meta[name="twitter:image:alt"]', { name: "twitter:image:alt" }, DEFAULT_IMAGE_ALT);
   }, [language, metadata]);
 
   return null;
