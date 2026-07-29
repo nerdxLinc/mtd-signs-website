@@ -1,10 +1,11 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
+import { testimonialSpanishText } from "../data/testimonialTranslations";
 import { useActiveTestimonials } from "../lib/portfolioApi";
 import { useTranslation } from "../lib/i18n";
 
 export default function QuoteImpact() {
-  const { t } = useTranslation();
+  const { language, t } = useTranslation();
   const { testimonials, loaded } = useActiveTestimonials();
   const [index, setIndex] = useState(0);
   const [hoverPaused, setHoverPaused] = useState(false);
@@ -66,13 +67,16 @@ export default function QuoteImpact() {
         <figure className="mt-7 grid min-h-[13rem] sm:min-h-[11rem]">
           {testimonials.map((testimonial, testimonialIndex) => {
             const isActive = testimonialIndex === index % testimonials.length;
+            const testimonialText = language === "es"
+              ? testimonialSpanishText[testimonial.id] ?? testimonial.text
+              : testimonial.text;
             return (
               <div
                 key={testimonial.id}
                 className={`col-start-1 row-start-1 transition-opacity duration-300 ${isActive ? "visible opacity-100" : "invisible opacity-0"}`}
                 aria-hidden={!isActive}
               >
-                <blockquote className="font-display text-3xl font-semibold uppercase leading-[1.05] text-bone sm:text-4xl lg:text-5xl">&ldquo;{testimonial.text}&rdquo;</blockquote>
+                <blockquote className="font-display text-3xl font-semibold uppercase leading-[1.05] text-bone sm:text-4xl lg:text-5xl">&ldquo;{testimonialText}&rdquo;</blockquote>
                 <figcaption className="mt-5 text-sm font-bold tracking-[0.12em] text-bone/60">{testimonial.clientName}</figcaption>
               </div>
             );
