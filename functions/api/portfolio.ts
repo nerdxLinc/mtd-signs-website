@@ -1,6 +1,7 @@
 import { json, publicImageUrl, type Env } from "../lib/access";
 import { isHomepageOnlyAsset } from "../lib/homepageAssets";
 import { normalizeProjectKey, projectFamiliesForRows } from "../lib/projects";
+import { cleanPortfolioAltText } from "../lib/seo";
 
 function mapRows(rows: any[]) {
   const families = projectFamiliesForRows(rows);
@@ -14,7 +15,7 @@ function mapRows(rows: any[]) {
       isCategoryCover: Boolean(row.is_category_cover),
       isHidden: false,
       imageUrl: publicImageUrl(row.id),
-      altText: row.alt_text,
+      altText: cleanPortfolioAltText(row.alt_text),
       filename: row.source_filename,
       projectKey: project.key,
       projectLabel: project.label,
