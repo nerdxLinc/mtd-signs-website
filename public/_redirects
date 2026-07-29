@@ -1,1 +1,15 @@
-/* /index.html 200
+/work /#work 301
+/admin /index.html 200
+/work/vehicle-wraps-fleet-graphics /index.html 200
+/work/vehicle-wraps-fleet-graphics/archive /index.html 200
+/work/logo-identity-design /index.html 200
+/work/logo-identity-design/archive /index.html 200
+/work/commercial-branding /index.html 200
+/work/commercial-branding/archive /index.html 200
+/work/church-ministry-graphics /index.html 200
+/work/church-ministry-graphics/archive /index.html 200
+/work/public-safety-graphics /index.html 200
+/work/public-safety-graphics/archive /index.html 200
+/work/specialty-projects /index.html 200
+/work/specialty-projects/archive /index.html 200
+/projects/:project /index.html 200
