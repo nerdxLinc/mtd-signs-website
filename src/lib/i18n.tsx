@@ -73,6 +73,12 @@ const copy = {
     closeImage: "Close image",
     categoryNavigation: "Continue exploring portfolio work",
     categorySwitch: "Switch portfolio category",
+    notFoundEyebrow: "404 · Page not found",
+    notFoundTitleFirst: "Wrong",
+    notFoundTitleAccent: "Turn.",
+    notFoundCopy: "The page you requested does not exist or has moved. Return to MTD Signs & Graphics to view signs, wraps, identity work, and specialty projects.",
+    returnHome: "Return Home",
+    viewFeaturedWork: "View Featured Work",
     categories: {
       "vehicle-wraps-fleet-graphics": "Vehicle Wraps & Fleet Graphics",
       "logo-identity-design": "Logo & Identity Design",
@@ -88,6 +94,14 @@ const copy = {
       "church-ministry-graphics": "Church & Ministry",
       "public-safety-graphics": "Public Safety",
       "specialty-projects": "Specialty Projects",
+    },
+    categoryDescriptions: {
+      "vehicle-wraps-fleet-graphics": "Custom vehicle wraps and fleet graphics designed to make work trucks, vans, trailers, and commercial fleets recognizable on the road throughout Arkansas.",
+      "logo-identity-design": "Logo and identity design built to stay clear and consistent across signs, vehicles, printed materials, uniforms, and digital use.",
+      "commercial-branding": "Commercial signs and branded graphics that help Arkansas businesses look established, attract attention, and stay recognizable from the street.",
+      "church-ministry-graphics": "Banners, signs, vehicle graphics, and ministry communication materials designed to help churches carry a clear, consistent message beyond their walls.",
+      "public-safety-graphics": "High-visibility vehicle lettering and graphics for police, fire, emergency, and other public-safety fleets, designed for clarity and professional presence.",
+      "specialty-projects": "Custom graphics, dimensional displays, installations, and one-of-a-kind visual projects that do not fit a standard signage category.",
     },
   },
   es: {
@@ -160,6 +174,12 @@ const copy = {
     closeImage: "Cerrar imagen",
     categoryNavigation: "Seguir explorando el portafolio",
     categorySwitch: "Cambiar categoría del portafolio",
+    notFoundEyebrow: "404 · Página no encontrada",
+    notFoundTitleFirst: "Giro",
+    notFoundTitleAccent: "Equivocado.",
+    notFoundCopy: "La página que solicitó no existe o fue trasladada. Regrese a MTD Signs & Graphics para ver letreros, rotulación, trabajos de identidad y proyectos especiales.",
+    returnHome: "Volver al Inicio",
+    viewFeaturedWork: "Ver Trabajo Destacado",
     categories: {
       "vehicle-wraps-fleet-graphics": "Rotulación de Vehículos y Flotillas",
       "logo-identity-design": "Diseño de Logotipo e Identidad",
@@ -176,15 +196,24 @@ const copy = {
       "public-safety-graphics": "Seguridad Pública",
       "specialty-projects": "Proyectos Especiales",
     },
+    categoryDescriptions: {
+      "vehicle-wraps-fleet-graphics": "Rotulación vehicular y gráficos para flotillas diseñados para que camiones de trabajo, furgonetas, remolques y flotillas comerciales sean reconocibles en las carreteras de Arkansas.",
+      "logo-identity-design": "Diseño de logotipo e identidad creado para mantenerse claro y consistente en letreros, vehículos, materiales impresos, uniformes y medios digitales.",
+      "commercial-branding": "Letreros comerciales y gráficos de marca que ayudan a los negocios de Arkansas a verse establecidos, atraer atención y ser reconocibles desde la calle.",
+      "church-ministry-graphics": "Banners, letreros, gráficos vehiculares y materiales de comunicación ministerial diseñados para ayudar a las iglesias a llevar un mensaje claro y consistente más allá de sus muros.",
+      "public-safety-graphics": "Rotulación y gráficos vehiculares de alta visibilidad para policía, bomberos, emergencias y otras flotillas de seguridad pública, diseñados para ofrecer claridad y presencia profesional.",
+      "specialty-projects": "Gráficos personalizados, exhibidores dimensionales, instalaciones y proyectos visuales únicos que no encajan en una categoría estándar de señalización.",
+    },
   },
 } as const;
 
-type CopyKey = Exclude<keyof typeof copy.en, "categories" | "shortCategories">;
+type CopyKey = Exclude<keyof typeof copy.en, "categories" | "shortCategories" | "categoryDescriptions">;
 type TranslationContextValue = {
   language: Language;
   setLanguage: (language: Language) => void;
   t: (key: CopyKey) => string;
   categoryLabel: (categoryId: string, fallback: string, short?: boolean) => string;
+  categoryDescription: (categoryId: string, fallback: string) => string;
 };
 
 const TranslationContext = createContext<TranslationContextValue | undefined>(undefined);
@@ -207,6 +236,10 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     categoryLabel: (categoryId, fallback, short = false) => {
       const labels = short ? copy[language].shortCategories : copy[language].categories;
       return labels[categoryId as keyof typeof labels] ?? fallback;
+    },
+    categoryDescription: (categoryId, fallback) => {
+      const descriptions = copy[language].categoryDescriptions;
+      return descriptions[categoryId as keyof typeof descriptions] ?? fallback;
     },
   }), [language]);
 
