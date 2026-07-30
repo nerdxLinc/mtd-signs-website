@@ -52,13 +52,11 @@ run and flag anything that doesn't compile — happy to fix immediately.
 - **How We Work** — Listen / Design / Build / Install, numbered since
   it's a real sequential process.
 - **Problem-solving story section** — three-photo detail strip.
-- **Contact** — info block + working client-side form (no backend wired
-  up yet — see the comment in `src/components/Contact.tsx`).
+- **Contact** — public form backed by a Pages Function and D1. Every
+  accepted inquiry is saved before the site attempts an email alert.
 
 ## Known gaps / things to swap before launch
 
-- The contact form only sets local state on submit. Wire it to a real
-  endpoint (Formspree, an API route, etc.) before launch.
 - `src/assets/work-chiropractic.jpg` was provided but isn't used in the
   current 8-tile Recent Work grid — swap it in if you'd rather feature it
   over one of the current eight.

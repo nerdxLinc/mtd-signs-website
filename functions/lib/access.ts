@@ -4,16 +4,8 @@ export type Env = {
   ASSETS: {
     fetch(input: Request | string | URL, init?: RequestInit): Promise<Response>;
   };
-  EMAIL?: {
-    send(message: {
-      to: string | { email: string; name?: string };
-      from: string | { email: string; name?: string };
-      replyTo?: string | { email: string; name?: string };
-      subject: string;
-      text?: string;
-      html?: string;
-    }): Promise<{ messageId: string }>;
-  };
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  CLOUDFLARE_EMAIL_API_TOKEN?: string;
 };
 
 export function json(data: unknown, init: ResponseInit = {}) {

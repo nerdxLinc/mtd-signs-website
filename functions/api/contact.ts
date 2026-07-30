@@ -10,6 +10,19 @@ type ContactPayload = {
 };
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NOTIFICATION_RECIPIENT = "mtdsigns@gmail.com";
+const NOTIFICATION_SENDER = "website@mtdsigns.com";
+
+type EmailApiResponse = {
+  success?: boolean;
+  errors?: Array<{ code?: number; message?: string }>;
+  result?: {
+    delivered?: string[];
+    queued?: string[];
+    permanent_bounces?: string[];
+    message_id?: string;
+  };
+};
 
 function clean(value: unknown, maxLength: number) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
@@ -31,6 +44,69 @@ async function ensureContactTable(env: Env) {
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `).run();
+}
+
+async function sendContactNotification(
+  env: Env,
+  inquiry: {
+    name: string;
+    email: string;
+    phone: string;
+    projectDetails: string;
+    language: "en" | "es";
+  },
+) {
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const apiToken = env.CLOUDFLARE_EMAIL_API_TOKEN?.trim();
+  if (!accountId || !apiToken) {
+    throw new Error("Cloudflare Email Service REST credentials are not configured.");
+  }
+
+  const response = await fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/email/sending/send`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        to: NOTIFICATION_RECIPIENT,
+        from: { address: NOTIFICATION_SENDER, name: "MTD Signs Website" },
+        reply_to: { address: inquiry.email, name: inquiry.name },
+        subject: `New website inquiry from ${inquiry.name}`,
+        text: [
+          "A new project inquiry was submitted at mtdsigns.com.",
+          "",
+          `Name: ${inquiry.name}`,
+          `Email: ${inquiry.email}`,
+          `Phone: ${inquiry.phone || "Not provided"}`,
+          `Language: ${inquiry.language === "es" ? "Spanish" : "English"}`,
+          "",
+          "Project details:",
+          inquiry.projectDetails || "Not provided",
+          "",
+          "The inquiry is also saved in the private MTD Admin inbox.",
+        ].join("\n"),
+      }),
+    },
+  );
+
+  const result = await response.json().catch(() => null) as EmailApiResponse | null;
+  const apiError = result?.errors
+    ?.map((error) => error.message?.trim())
+    .filter((message): message is string => Boolean(message))
+    .join("; ");
+
+  if (!response.ok || result?.success !== true) {
+    throw new Error(apiError || `Cloudflare Email Service returned HTTP ${response.status}.`);
+  }
+
+  const permanentlyBounced = result.result?.permanent_bounces
+    ?.some((address) => address.toLowerCase() === NOTIFICATION_RECIPIENT);
+  if (permanentlyBounced) {
+    throw new Error(`Cloudflare Email Service permanently bounced ${NOTIFICATION_RECIPIENT}.`);
+  }
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -68,26 +144,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     let notificationSent = false;
     let notificationError: string | null = null;
     try {
-      if (!env.EMAIL) throw new Error("Cloudflare Email Service binding EMAIL is not configured.");
-      await env.EMAIL.send({
-        to: "mtdsigns@gmail.com",
-        from: { email: "website@mtdsigns.com", name: "MTD Signs Website" },
-        replyTo: { email, name },
-        subject: `New website inquiry from ${name}`,
-        text: [
-          "A new project inquiry was submitted at mtdsigns.com.",
-          "",
-          `Name: ${name}`,
-          `Email: ${email}`,
-          `Phone: ${phone || "Not provided"}`,
-          `Language: ${language === "es" ? "Spanish" : "English"}`,
-          "",
-          "Project details:",
-          projectDetails || "Not provided",
-          "",
-          "The inquiry is also saved in the private MTD Admin inbox.",
-        ].join("\n"),
-      });
+      await sendContactNotification(env, { name, email, phone, projectDetails, language });
       notificationSent = true;
     } catch (error) {
       notificationError = error instanceof Error ? error.message.slice(0, 1000) : "Email notification failed.";

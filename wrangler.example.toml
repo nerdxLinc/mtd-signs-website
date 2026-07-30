@@ -11,7 +11,7 @@ database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"
 binding = "PORTFOLIO_BUCKET"
 bucket_name = "REPLACE_WITH_YOUR_R2_BUCKET_NAME"
 
-[[send_email]]
-name = "EMAIL"
-destination_address = "mtdsigns@gmail.com"
-allowed_sender_addresses = ["website@mtdsigns.com"]
+[vars]
+CLOUDFLARE_ACCOUNT_ID = "REPLACE_WITH_YOUR_CLOUDFLARE_ACCOUNT_ID"
+
+# Add CLOUDFLARE_EMAIL_API_TOKEN as an encrypted Pages secret. Never commit it.
