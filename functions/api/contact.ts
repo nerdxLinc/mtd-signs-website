@@ -12,6 +12,7 @@ type ContactPayload = {
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const NOTIFICATION_RECIPIENT = "mtdsigns@gmail.com";
 const NOTIFICATION_SENDER = "website@mtdsigns.com";
+const EMAIL_SERVICE_ACCOUNT_ID = "c6920b6bea2391db4a4b10c0a2f97f45";
 
 type EmailApiResponse = {
   success?: boolean;
@@ -56,7 +57,7 @@ async function sendContactNotification(
     language: "en" | "es";
   },
 ) {
-  const accountId = env.CLOUDFLARE_ACCOUNT_ID?.trim();
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID?.trim() || EMAIL_SERVICE_ACCOUNT_ID;
   const apiToken = env.CLOUDFLARE_EMAIL_API_TOKEN?.trim();
   const missingCredentials = [
     !accountId ? "CLOUDFLARE_ACCOUNT_ID" : "",
