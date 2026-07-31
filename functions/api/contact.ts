@@ -58,8 +58,12 @@ async function sendContactNotification(
 ) {
   const accountId = env.CLOUDFLARE_ACCOUNT_ID?.trim();
   const apiToken = env.CLOUDFLARE_EMAIL_API_TOKEN?.trim();
-  if (!accountId || !apiToken) {
-    throw new Error("Cloudflare Email Service REST credentials are not configured.");
+  const missingCredentials = [
+    !accountId ? "CLOUDFLARE_ACCOUNT_ID" : "",
+    !apiToken ? "CLOUDFLARE_EMAIL_API_TOKEN" : "",
+  ].filter(Boolean);
+  if (missingCredentials.length > 0) {
+    throw new Error(`Cloudflare Email Service REST credential missing: ${missingCredentials.join(", ")}.`);
   }
 
   const response = await fetch(
