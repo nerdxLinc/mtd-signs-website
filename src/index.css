@@ -242,13 +242,13 @@ textarea:focus-visible {
 
 .mtd-hero__primary-action {
   padding-inline: 1.35rem;
-  background: #ff6d01;
+  background: #4c70eb;
   color: #0a0a0a;
   transition: background-color 160ms ease;
 }
 
 .mtd-hero__primary-action:hover {
-  background: #c85601;
+  background: #6485f0;
 }
 
 .mtd-hero__secondary-action {
