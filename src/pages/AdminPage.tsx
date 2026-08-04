@@ -28,6 +28,7 @@ type ContactInquiry = {
 
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_SOURCE_RECORD_BYTES = 512 * 1024;
+const MAX_BULK_IMAGES = 100;
 const tabs: Array<[AdminTab, string]> = [["inquiries", "Inquiries"], ["images", "Images"], ["review", "Review Archive"], ["upload", "Upload Images"], ["duplicates", "Duplicate Review"], ["testimonials", "Testimonials"]];
 
 const developmentDuplicateReviews: DuplicateReview[] = [
@@ -50,7 +51,27 @@ function shortCategory(categoryId: string) {
 function isZip(file: File) { return /\.zip$/i.test(file.name); }
 function isImage(file: File) { return /\.(jpe?g|png|webp|avif)$/i.test(file.name); }
 function formatBytes(bytes: number) { return bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(bytes >= 100 * 1024 * 1024 ? 0 : 1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`; }
-function displayFilename(path: string) { return path.split("/").filter(Boolean).pop() ?? path; }
+function displayFilename(path: string) { return path.split(/[\\/]/).filter(Boolean).pop() ?? path; }
+
+function filenameExtension(filename: string) {
+  const match = displayFilename(filename).match(/\.(jpe?g|png|webp|avif)$/i);
+  return match ? `.${match[1].toLowerCase()}` : ".jpg";
+}
+
+function filenameSlug(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+function numberedFilename(projectLabel: string, index: number, count: number, currentFilename: string) {
+  const width = Math.max(2, String(count).length);
+  return `${filenameSlug(projectLabel)}-${String(index + 1).padStart(width, "0")}${filenameExtension(currentFilename)}`;
+}
 
 function adminGridColumns() {
   if (window.matchMedia("(min-width: 1024px)").matches) return 3;
@@ -127,6 +148,12 @@ export default function AdminPage() {
   const [notice, setNotice] = useState("");
   const [movingImageId, setMovingImageId] = useState<string | null>(null);
   const [savingTestimonialId, setSavingTestimonialId] = useState<string | null>(null);
+  const [selectedImageIds, setSelectedImageIds] = useState<string[]>([]);
+  const [bulkProjectLabel, setBulkProjectLabel] = useState("");
+  const [bulkCategoryId, setBulkCategoryId] = useState("");
+  const [bulkRenameFiles, setBulkRenameFiles] = useState(false);
+  const [bulkPreviewOpen, setBulkPreviewOpen] = useState(false);
+  const [bulkSaving, setBulkSaving] = useState(false);
   const queueRef = useRef<ImportBatchProgress[]>([]);
   const processingRef = useRef(false);
   const pauseAfterCurrentRef = useRef(false);
@@ -148,6 +175,8 @@ export default function AdminPage() {
   }, []);
 
   const filteredImages = useMemo(() => images.filter((image) => (categoryFilter === "all" || image.categoryId === categoryFilter) && (statusFilter === "all" || image.status === statusFilter)), [categoryFilter, images, statusFilter]);
+  const selectedImageIdSet = useMemo(() => new Set(selectedImageIds), [selectedImageIds]);
+  const selectedImages = useMemo(() => images.filter((image) => selectedImageIdSet.has(image.id)), [images, selectedImageIdSet]);
   const archiveImages = useMemo(() => images.filter((image) => image.status === "archive").sort((first, second) => first.filename.localeCompare(second.filename)), [images]);
   const reviewImage = archiveImages[Math.min(reviewIndex, Math.max(0, archiveImages.length - 1))];
   const overall = useMemo(() => {
@@ -237,14 +266,71 @@ export default function AdminPage() {
     if (!response.ok) throw new Error(payload.error ?? "This image could not be saved.");
     applyPatch();
     const publishedCount = Number(payload.publishedFamilyCount ?? 0);
-    const movedCount = Number(payload.recategorizedFamilyCount ?? 0);
-    const relabeledCount = Number(payload.relabeledFamilyCount ?? 0);
     if (publishedCount > 1) setNotice(`Image saved. ${publishedCount} images from this project are now visible.`);
-    else if (movedCount > 1) setNotice(`Category saved. ${movedCount} related project images moved together.`);
-    else if (relabeledCount > 1) setNotice(`Project name saved. ${relabeledCount} related images now share this project family.`);
     else setNotice("Image saved.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "This image could not be saved.");
+    }
+  }
+
+  function toggleImageSelection(id: string) {
+    setSelectedImageIds((current) => {
+      if (current.includes(id)) return current.filter((imageId) => imageId !== id);
+      if (current.length >= MAX_BULK_IMAGES) {
+        setNotice(`Bulk corrections are limited to ${MAX_BULK_IMAGES} photos at a time.`);
+        return current;
+      }
+      return [...current, id];
+    });
+    setBulkPreviewOpen(false);
+  }
+
+  function selectVisibleImages() {
+    setSelectedImageIds((current) => {
+      const combined = [...new Set([...current, ...filteredImages.map((image) => image.id)])];
+      if (combined.length > MAX_BULK_IMAGES) setNotice(`Selected the first ${MAX_BULK_IMAGES} photos. Apply that group before selecting more.`);
+      return combined.slice(0, MAX_BULK_IMAGES);
+    });
+    setBulkPreviewOpen(false);
+  }
+
+  function clearBulkSelection() {
+    setSelectedImageIds([]);
+    setBulkProjectLabel("");
+    setBulkCategoryId("");
+    setBulkRenameFiles(false);
+    setBulkPreviewOpen(false);
+  }
+
+  async function applyBulkCorrections() {
+    const projectLabel = bulkProjectLabel.trim().replace(/\s+/g, " ");
+    if (!selectedImages.length) { setNotice("Check the photos you want to correct first."); return; }
+    if (bulkRenameFiles && !projectLabel) { setNotice("Enter a project name before generating filenames."); return; }
+    if (!projectLabel && !bulkCategoryId) { setNotice("Choose a project name, category, or numbered filenames before reviewing."); return; }
+    if (!remoteReady) { setNotice("The Cloudflare database is unavailable, so no bulk corrections were saved."); return; }
+
+    setBulkSaving(true);
+    try {
+      const response = await fetch("/api/admin/portfolio", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ids: selectedImages.map((image) => image.id),
+          ...(projectLabel ? { projectLabel } : {}),
+          ...(bulkCategoryId ? { categoryId: bulkCategoryId } : {}),
+          renameSequentially: bulkRenameFiles,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error ?? "These corrections could not be saved.");
+      await refreshRemoteImages();
+      const count = Number(payload.updatedCount ?? selectedImages.length);
+      clearBulkSelection();
+      setNotice(`${count} checked photo${count === 1 ? " was" : "s were"} corrected. The stored image files were not replaced.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "These corrections could not be saved.");
+    } finally {
+      setBulkSaving(false);
     }
   }
 
@@ -566,7 +652,7 @@ export default function AdminPage() {
             {!reviewImage ? <p className="mt-8 border border-line p-5 text-sm text-bone/60">There are no Archive images to review yet.</p> : <article className="mt-8 overflow-hidden border border-line bg-charcoal2">
               <img src={reviewImage.imageUrl} alt={reviewImage.altText} className="aspect-[4/3] w-full object-contain bg-ink" />
               <div className="space-y-5 p-5 sm:p-7">
-                <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">{shortCategory(reviewImage.categoryId)} · Archive</p><p className="mt-2 break-words text-sm text-bone/70">{reviewImage.filename}</p><label className="mt-3 block text-xs text-bone/60">Category<select value={reviewImage.categoryId} onChange={(event: ChangeEvent<HTMLSelectElement>) => saveImage(reviewImage.id, { categoryId: event.target.value })} className="ml-2 bg-ink px-2 py-1 text-bone">{workCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select><span className="ml-2 text-bone/40">Updates this project’s related images together.</span></label><p className="mt-2 text-xs text-bone/45">Image {currentPosition} of {archiveImages.length}{reviewImage.isHidden ? " · held for duplicate review" : ""}</p></div><div className="flex gap-2"><button type="button" disabled={currentPosition <= 1} onClick={() => setReviewIndex((index) => Math.max(0, index - 1))} className="border border-line px-3 py-2 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Previous</button><button type="button" disabled={currentPosition >= archiveImages.length} onClick={() => setReviewIndex((index) => Math.min(archiveImages.length - 1, index + 1))} className="border border-line px-3 py-2 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Next</button></div></div>
+                <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">{shortCategory(reviewImage.categoryId)} · Archive</p><p className="mt-2 break-words text-sm text-bone/70">{reviewImage.filename}</p><label className="mt-3 block text-xs text-bone/60">Category<select value={reviewImage.categoryId} onChange={(event: ChangeEvent<HTMLSelectElement>) => saveImage(reviewImage.id, { categoryId: event.target.value })} className="ml-2 bg-ink px-2 py-1 text-bone">{workCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}</select><span className="ml-2 text-bone/40">Only this photo changes.</span></label><p className="mt-2 text-xs text-bone/45">Image {currentPosition} of {archiveImages.length}{reviewImage.isHidden ? " · held for duplicate review" : ""}</p></div><div className="flex gap-2"><button type="button" disabled={currentPosition <= 1} onClick={() => setReviewIndex((index) => Math.max(0, index - 1))} className="border border-line px-3 py-2 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Previous</button><button type="button" disabled={currentPosition >= archiveImages.length} onClick={() => setReviewIndex((index) => Math.min(archiveImages.length - 1, index + 1))} className="border border-line px-3 py-2 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Next</button></div></div>
                 <div className="flex flex-wrap gap-3"><button type="button" onClick={() => saveImage(reviewImage.id, { status: "featured" })} className="bg-orange px-4 py-3 text-xs font-bold uppercase text-ink">Promote to Featured</button><button type="button" onClick={() => saveImage(reviewImage.id, { isCategoryCover: true, status: "featured" })} className="border border-line px-4 py-3 text-xs font-bold uppercase text-bone hover:border-orange">Make Category Cover</button><button type="button" onClick={() => saveImage(reviewImage.id, { isHidden: !reviewImage.isHidden })} className="border border-line px-4 py-3 text-xs font-bold uppercase text-bone hover:border-orange">{reviewImage.isHidden ? "Make visible" : "Hide"}</button></div>
               </div>
             </article>}
@@ -626,45 +712,87 @@ export default function AdminPage() {
 
         {tab === "images" && (
           <section className="mt-8">
-            <div className="flex flex-wrap gap-4">
-              <label className="text-sm text-bone/70">
-                Category
-                <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone">
-                  <option value="all">All</option>
-                  {workCategories.map((category) => <option value={category.id} key={category.id}>{category.label}</option>)}
-                </select>
-              </label>
-              <label className="text-sm text-bone/70">
-                Status
-                <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | PortfolioStatus)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone">
-                  <option value="all">All</option>
-                  <option value="featured">Featured</option>
-                  <option value="archive">Archive</option>
-                </select>
-              </label>
+            <div className="flex flex-wrap items-end gap-4">
+              <label className="text-sm text-bone/70">Category filter<select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone"><option value="all">All</option>{workCategories.map((category) => <option value={category.id} key={category.id}>{category.label}</option>)}</select></label>
+              <label className="text-sm text-bone/70">Status filter<select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as "all" | PortfolioStatus)} className="ml-2 bg-charcoal2 px-3 py-2 text-bone"><option value="all">All</option><option value="featured">Featured</option><option value="archive">Archive</option></select></label>
             </div>
             {categoryFilter !== "all" && (() => {
               const selected = workCategories.find((category) => category.id === categoryFilter);
               if (!selected) return null;
               return <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line bg-charcoal2 px-4 py-3 text-sm"><span className="font-bold text-bone/60">Check this arrangement:</span><a href={`/work/${selected.slug}`} target="_blank" rel="noreferrer" className="font-bold text-orange hover:text-bone">Featured Gallery</a><a href={`/work/${selected.slug}/archive`} target="_blank" rel="noreferrer" className="font-bold text-orange hover:text-bone">Archive</a></div>;
             })()}
-            <p className="mt-4 text-sm text-bone/55">Use the arrows on any image to move it within its current category and Featured or Archive section. Each move saves immediately.</p>
+            <div className="mt-5 border border-line bg-charcoal2 p-4 sm:p-5">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">Bulk corrections</p>
+                  <p className="mt-2 max-w-2xl text-sm text-bone/65">Check only photos that belong together. Bulk corrections affect only those checked photos; the stored image files are never replaced.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" disabled={!filteredImages.length} onClick={selectVisibleImages} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Select visible ({Math.min(filteredImages.length, MAX_BULK_IMAGES)})</button>
+                  <button type="button" disabled={!selectedImages.length} onClick={clearBulkSelection} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Clear selection</button>
+                </div>
+              </div>
+              <p className="mt-4 text-sm font-bold text-bone">{selectedImages.length} photo{selectedImages.length === 1 ? "" : "s"} checked</p>
+              {selectedImages.length > 0 && (
+                <div className="mt-4 grid gap-4 border-t border-line pt-4 lg:grid-cols-[1fr_1fr_auto] lg:items-end">
+                  <label className="block text-xs font-bold uppercase tracking-wide text-bone/60">Project name <span className="normal-case font-normal tracking-normal text-bone/40">— blank keeps current names</span><input value={bulkProjectLabel} maxLength={120} onChange={(event) => { setBulkProjectLabel(event.target.value); setBulkPreviewOpen(false); }} placeholder="Example: Brown Bear Carpet Cleaning" className="mt-2 block min-h-11 w-full bg-ink px-3 text-sm normal-case tracking-normal text-bone" /></label>
+                  <label className="block text-xs font-bold uppercase tracking-wide text-bone/60">Category <span className="normal-case font-normal tracking-normal text-bone/40">— blank keeps current categories</span><select value={bulkCategoryId} onChange={(event) => { setBulkCategoryId(event.target.value); setBulkPreviewOpen(false); }} className="mt-2 block min-h-11 w-full bg-ink px-3 text-sm normal-case tracking-normal text-bone"><option value="">Keep current categories</option>{workCategories.map((category) => <option value={category.id} key={category.id}>{category.label}</option>)}</select></label>
+                  <label className="flex min-h-11 items-center gap-3 border border-line px-3 text-sm text-bone/75"><input type="checkbox" checked={bulkRenameFiles} onChange={(event) => { setBulkRenameFiles(event.target.checked); setBulkPreviewOpen(false); }} /> Number filenames from project name</label>
+                  <div className="lg:col-span-3 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-xs text-bone/45">Numbering follows the checked photos’ current gallery order.</p>
+                    <button type="button" disabled={!bulkProjectLabel.trim() && !bulkCategoryId || bulkRenameFiles && !bulkProjectLabel.trim()} onClick={() => setBulkPreviewOpen(true)} className="min-h-11 bg-orange px-5 text-xs font-bold uppercase text-ink disabled:cursor-not-allowed disabled:opacity-40">Review changes</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {bulkPreviewOpen && selectedImages.length > 0 && (
+              <div className="mt-5 border border-orange/60 bg-charcoal2 p-4 sm:p-6" role="region" aria-label="Review bulk photo corrections">
+                <p className="text-xs font-bold uppercase tracking-[0.16em] text-orange">Review before saving</p>
+                <h3 className="mt-2 font-display text-3xl font-semibold uppercase text-bone">Exactly {selectedImages.length} checked photo{selectedImages.length === 1 ? "" : "s"}</h3>
+                <p className="mt-2 text-sm text-bone/60">Nothing changes until you use Apply Corrections below.</p>
+                <div className="mt-5 max-h-[34rem] space-y-3 overflow-y-auto pr-1">
+                  {selectedImages.map((image, index) => {
+                    const nextFilename = bulkRenameFiles ? numberedFilename(bulkProjectLabel.trim(), index, selectedImages.length, image.filename) : displayFilename(image.filename);
+                    return (
+                      <article key={image.id} className="grid gap-3 border border-line bg-ink p-3 sm:grid-cols-[7rem_1fr]">
+                        <img src={image.imageUrl} alt="" className="aspect-[4/3] w-full object-cover" />
+                        <dl className="grid min-w-0 gap-x-4 gap-y-2 text-xs sm:grid-cols-[5rem_1fr]">
+                          <dt className="font-bold uppercase text-bone/45">Filename</dt><dd className="min-w-0 break-words text-bone/75">{displayFilename(image.filename)}{bulkRenameFiles && <><span className="mx-2 text-orange">→</span><span className="font-bold text-bone">{nextFilename}</span></>}</dd>
+                          <dt className="font-bold uppercase text-bone/45">Project</dt><dd className="break-words text-bone/75">{image.projectLabel || "Unassigned"}{bulkProjectLabel.trim() && <><span className="mx-2 text-orange">→</span><span className="font-bold text-bone">{bulkProjectLabel.trim()}</span></>}</dd>
+                          <dt className="font-bold uppercase text-bone/45">Category</dt><dd className="text-bone/75">{shortCategory(image.categoryId)}{bulkCategoryId && <><span className="mx-2 text-orange">→</span><span className="font-bold text-bone">{shortCategory(bulkCategoryId)}</span></>}</dd>
+                        </dl>
+                      </article>
+                    );
+                  })}
+                </div>
+                <div className="mt-5 flex flex-wrap justify-end gap-3 border-t border-line pt-5">
+                  <button type="button" disabled={bulkSaving} onClick={() => setBulkPreviewOpen(false)} className="min-h-11 border border-line px-4 text-xs font-bold uppercase text-bone hover:border-orange disabled:opacity-40">Back</button>
+                  <button type="button" disabled={bulkSaving} onClick={() => void applyBulkCorrections()} className="min-h-11 bg-orange px-5 text-xs font-bold uppercase text-ink disabled:opacity-50">{bulkSaving ? "Saving…" : `Apply corrections to ${selectedImages.length}`}</button>
+                </div>
+              </div>
+            )}
+
+            <p className="mt-5 text-sm text-bone/55">Per-photo category changes save immediately. Filename and project edits save when you leave the field. The arrow controls change gallery order.</p>
             <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {filteredImages.map((image) => (
-                <article className="border border-line bg-charcoal2" key={image.id}>
-                  <img src={image.imageUrl} alt={image.altText} className="aspect-[4/3] w-full object-cover" />
+                <article className={`border bg-charcoal2 ${selectedImageIdSet.has(image.id) ? "border-orange" : "border-line"}`} key={image.id}>
+                  <div className="relative">
+                    <img src={image.imageUrl} alt={image.altText} className="aspect-[4/3] w-full object-cover" />
+                    <label className="absolute left-3 top-3 flex min-h-10 cursor-pointer items-center gap-2 border border-bone/25 bg-ink/90 px-3 text-xs font-bold uppercase text-bone shadow-lg"><input type="checkbox" checked={selectedImageIdSet.has(image.id)} onChange={() => toggleImageSelection(image.id)} /> Select</label>
+                  </div>
                   <div className="space-y-3 p-4">
                     <p className="text-xs font-bold uppercase tracking-[0.12em] text-orange">{shortCategory(image.categoryId)} · {image.status}</p>
-                    <p className="truncate text-sm text-bone/70">{image.filename}</p>
+                    <label className="block text-xs text-bone/60">Filename<input key={image.filename} defaultValue={displayFilename(image.filename)} maxLength={180} onBlur={(event) => { let filename = event.currentTarget.value.trim(); if (filename && !/\.(jpe?g|png|webp|avif)$/i.test(filename)) filename += filenameExtension(image.filename); if (filename && filename !== displayFilename(image.filename)) void saveImage(image.id, { filename }); }} className="mt-1 block w-full bg-ink px-2 py-1 text-sm text-bone" /></label>
                     <label className="block text-xs text-bone/60">
-                      Change Category
+                      Category — this photo
                       <select value={image.categoryId} onChange={(event: ChangeEvent<HTMLSelectElement>) => saveImage(image.id, { categoryId: event.target.value })} className="ml-2 bg-ink px-2 py-1 text-bone">
                         {workCategories.map((category) => <option key={category.id} value={category.id}>{category.label}</option>)}
                       </select>
                     </label>
                     <label className="block text-xs text-bone/60">
-                      Project
-                      <input defaultValue={image.projectLabel ?? ""} onBlur={(event) => { if (event.currentTarget.value !== (image.projectLabel ?? "")) saveImage(image.id, { projectLabel: event.currentTarget.value }); }} placeholder="Automatic from filename" className="mt-1 block w-full bg-ink px-2 py-1 text-sm text-bone" />
+                      Project — this photo
+                      <input key={image.projectLabel ?? ""} defaultValue={image.projectLabel ?? ""} maxLength={120} onBlur={(event) => { if (event.currentTarget.value.trim() !== (image.projectLabel ?? "")) void saveImage(image.id, { projectLabel: event.currentTarget.value }); }} placeholder="Automatic from filename" className="mt-1 block w-full bg-ink px-2 py-1 text-sm text-bone" />
                     </label>
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => saveImage(image.id, { status: image.status === "featured" ? "archive" : "featured" })} className="border border-line px-2 py-1 text-xs font-bold text-bone hover:border-orange">{image.status === "featured" ? "Demote to Archive" : "Promote to Featured"}</button>

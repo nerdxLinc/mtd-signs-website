@@ -96,7 +96,10 @@ export function projectFamiliesForRows(rows: any[]) {
   const candidates = rows.map((row) => {
     const words = familyWordsFromFilename(String(row.source_filename ?? ""));
     const resolved = projectFromRow(row);
-    return { id: String(row.id), words, key: resolved.key, label: resolved.label };
+    const storedKey = row.project_key ? String(row.project_key) : undefined;
+    const storedLabel = row.project_label ? String(row.project_label) : undefined;
+    const explicit = Boolean(storedKey && storedLabel && resolved.key === storedKey && resolved.label === storedLabel);
+    return { id: String(row.id), words, key: resolved.key, label: resolved.label, explicit };
   });
   const unique = [...new Map(candidates
     .filter((candidate): candidate is typeof candidate & { key: string; label: string } => Boolean(candidate.key && candidate.label))
@@ -108,6 +111,10 @@ export function projectFamiliesForRows(rows: any[]) {
   // per unique project key. This replaces the former row-by-row comparison,
   // which became too expensive as the portfolio grew.
   for (const candidate of unique) {
+    if (candidate.explicit) {
+      canonicalByKey.set(candidate.key, { key: candidate.key, label: candidate.label });
+      continue;
+    }
     const parent = unique.find((possible) =>
       possible.key !== candidate.key
       && possible.words.length >= 2
@@ -128,15 +135,16 @@ export function projectFamiliesForRows(rows: any[]) {
     prefixGroups.set(prefix, [...(prefixGroups.get(prefix) ?? []), candidate]);
   }
   for (const group of prefixGroups.values()) {
-    const keys = new Set(group.map((candidate) => candidate.key).filter(Boolean));
-    if (keys.size < 2) continue;
+    const allKeys = new Set(group.map((candidate) => candidate.key).filter(Boolean));
+    if (allKeys.size < 2) continue;
     const label = labelFromWords(group[0].words.slice(0, 2));
     const project = { key: normalizeProjectKey(label), label };
-    for (const key of keys) canonicalByKey.set(String(key), project);
+    const inferredKeys = new Set(group.filter((candidate) => !candidate.explicit).map((candidate) => candidate.key).filter(Boolean));
+    for (const key of inferredKeys) canonicalByKey.set(String(key), project);
   }
 
   for (const candidate of candidates) {
-    const project = candidate.key ? canonicalByKey.get(candidate.key) : undefined;
+    const project = candidate.explicit ? { key: candidate.key, label: candidate.label } : candidate.key ? canonicalByKey.get(candidate.key) : undefined;
     assignments.set(candidate.id, project ?? { key: candidate.key, label: candidate.label });
   }
 
