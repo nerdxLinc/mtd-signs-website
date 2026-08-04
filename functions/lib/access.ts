@@ -1,3 +1,5 @@
+import { createRemoteJWKSet, jwtVerify } from "jose";
+
 export type Env = {
   DB: D1Database;
   PORTFOLIO_BUCKET: R2Bucket;
@@ -6,7 +8,13 @@ export type Env = {
   };
   CLOUDFLARE_ACCOUNT_ID?: string;
   CLOUDFLARE_EMAIL_API_TOKEN?: string;
+  CF_ACCESS_TEAM_DOMAIN?: string;
+  CF_ACCESS_AUD?: string;
 };
+
+const DEFAULT_ACCESS_TEAM_DOMAIN = "https://icy-forest-091f.cloudflareaccess.com";
+const DEFAULT_ACCESS_AUD = "c39659b24d588c1b9c3a6d9415c8f46f816ae00f8b835c2343328f54ba727ab9";
+const accessKeySets = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 export function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), { ...init, headers: { "content-type": "application/json; charset=utf-8", ...init.headers } });
@@ -14,6 +22,29 @@ export function json(data: unknown, init: ResponseInit = {}) {
 
 export function getAccessEmail(request: Request) {
   return request.headers.get("Cf-Access-Authenticated-User-Email");
+}
+
+export async function getVerifiedAccessEmail(request: Request, env: Env) {
+  const token = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (!token) return null;
+
+  const teamDomain = (env.CF_ACCESS_TEAM_DOMAIN || DEFAULT_ACCESS_TEAM_DOMAIN).replace(/\/+$/, "");
+  const audience = env.CF_ACCESS_AUD || DEFAULT_ACCESS_AUD;
+  let keySet = accessKeySets.get(teamDomain);
+  if (!keySet) {
+    keySet = createRemoteJWKSet(new URL(`${teamDomain}/cdn-cgi/access/certs`));
+    accessKeySets.set(teamDomain, keySet);
+  }
+
+  try {
+    const { payload } = await jwtVerify(token, keySet, {
+      issuer: teamDomain,
+      audience,
+    });
+    return typeof payload.email === "string" && payload.email.trim() ? payload.email.trim() : null;
+  } catch {
+    return null;
+  }
 }
 
 export function requireAdmin(request: Request) {

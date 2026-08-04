@@ -1,4 +1,4 @@
-import { getAccessEmail, type Env } from "./lib/access";
+import { getVerifiedAccessEmail, type Env } from "./lib/access";
 import {
   SITE_URL,
   adminSeo,
@@ -43,14 +43,25 @@ async function appShell(env: Env, request: Request) {
 export const onRequest: PagesFunction<Env> = async ({ request, next, env }) => {
   const url = new URL(request.url);
   const pathname = normalizePathname(url.pathname);
+  let effectiveRequest = request;
 
   if (url.hostname === "mtdsigns.com") {
     const destination = new URL(`${url.pathname}${url.search}`, `${SITE_URL}/`);
     return Response.redirect(destination.toString(), 301);
   }
 
-  if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) {
-    if (!getAccessEmail(request)) return new Response("Cloudflare Access authentication is required.", { status: 401 });
+  const isAdminRequest = url.pathname === "/admin"
+    || url.pathname.startsWith("/admin/")
+    || url.pathname === "/api/admin"
+    || url.pathname.startsWith("/api/admin/");
+
+  if (isAdminRequest) {
+    const email = await getVerifiedAccessEmail(request, env);
+    if (!email) return new Response("Cloudflare Access authentication is required.", { status: 401 });
+
+    const headers = new Headers(request.headers);
+    headers.set("Cf-Access-Authenticated-User-Email", email);
+    effectiveRequest = new Request(request, { headers });
   }
 
   if (pathname === "/work") {
@@ -58,8 +69,8 @@ export const onRequest: PagesFunction<Env> = async ({ request, next, env }) => {
     return Response.redirect(destination.toString(), 301);
   }
 
-  if ((request.method !== "GET" && request.method !== "HEAD") || url.pathname.startsWith("/api/") || !isLikelyDocument(pathname, request)) {
-    return next();
+  if ((effectiveRequest.method !== "GET" && effectiveRequest.method !== "HEAD") || url.pathname.startsWith("/api/") || !isLikelyDocument(pathname, effectiveRequest)) {
+    return next(effectiveRequest);
   }
 
   let metadata: RouteSeo;
@@ -101,7 +112,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, next, env }) => {
     }
   }
 
-  const shell = await appShell(env, request);
+  const shell = await appShell(env, effectiveRequest);
   if (!shell.ok) return shell;
   const html = await shell.text();
   const rendered = renderSeoHtml(html, metadata, status);
@@ -112,7 +123,7 @@ export const onRequest: PagesFunction<Env> = async ({ request, next, env }) => {
   headers.delete("etag");
   if (metadata.robots.startsWith("noindex")) headers.set("x-robots-tag", metadata.robots);
 
-  return new Response(request.method === "HEAD" ? null : rendered, {
+  return new Response(effectiveRequest.method === "HEAD" ? null : rendered, {
     status,
     statusText: status === 404 ? "Not Found" : status === 503 ? "Service Unavailable" : "OK",
     headers,
