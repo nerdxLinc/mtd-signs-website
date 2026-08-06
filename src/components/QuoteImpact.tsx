@@ -4,6 +4,23 @@ import { testimonialSpanishText } from "../data/testimonialTranslations";
 import { useActiveTestimonials } from "../lib/portfolioApi";
 import { useTranslation } from "../lib/i18n";
 
+const TESTIMONIAL_ROTATION_MS = 6_000;
+const OUTER_QUOTATION_MARKS = new Set(['"', "\u201C", "\u201D", "\u201E", "\u201F", "\u00AB", "\u00BB"]);
+
+function withoutOuterQuotationMarks(text: string) {
+  let displayText = text.trim();
+
+  while (
+    displayText.length > 1
+    && OUTER_QUOTATION_MARKS.has(displayText[0])
+    && OUTER_QUOTATION_MARKS.has(displayText[displayText.length - 1])
+  ) {
+    displayText = displayText.slice(1, -1).trim();
+  }
+
+  return displayText;
+}
+
 export default function QuoteImpact() {
   const { language, t } = useTranslation();
   const { testimonials, loaded } = useActiveTestimonials();
@@ -37,7 +54,7 @@ export default function QuoteImpact() {
     if (paused || reducedMotion || testimonials.length < 2) return;
     const timer = window.setTimeout(
       () => setIndex((current) => (current + 1) % testimonials.length),
-      10_000,
+      TESTIMONIAL_ROTATION_MS,
     );
     return () => window.clearTimeout(timer);
   }, [index, paused, reducedMotion, testimonials.length]);
@@ -67,9 +84,10 @@ export default function QuoteImpact() {
         <figure className="mt-7 grid min-h-[13rem] sm:min-h-[11rem]">
           {testimonials.map((testimonial, testimonialIndex) => {
             const isActive = testimonialIndex === index % testimonials.length;
-            const testimonialText = language === "es"
+            const localizedText = language === "es"
               ? testimonialSpanishText[testimonial.id] ?? testimonial.text
               : testimonial.text;
+            const testimonialText = withoutOuterQuotationMarks(localizedText);
             return (
               <div
                 key={testimonial.id}
