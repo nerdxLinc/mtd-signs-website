@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
+import CategorySwitcher from "../components/CategorySwitcher";
 import PortfolioImageTile from "../components/PortfolioImageTile";
 import { getWorkCategory } from "../data/workCategories";
 import { projectLabelFromKey } from "../lib/projectFamilies";
@@ -11,6 +12,8 @@ export default function ProjectGalleryPage({ projectKey }: ProjectGalleryPagePro
   const { categoryLabel, t } = useTranslation();
   const { images, usingDevelopmentFallback, loadError } = useProjectImages(projectKey);
   const projectLabel = images[0]?.projectLabel ?? projectLabelFromKey(projectKey);
+  const requestedCategoryId = new URLSearchParams(window.location.search).get("category") ?? "";
+  const activeCategory = getWorkCategory(requestedCategoryId) ?? getWorkCategory(images[0]?.categoryId ?? "");
 
   return (
     <main className="min-h-screen bg-ink px-5 py-8 sm:px-8 lg:py-12">
@@ -30,6 +33,14 @@ export default function ProjectGalleryPage({ projectKey }: ProjectGalleryPagePro
           {images.map((image) => { const category = getWorkCategory(image.categoryId); return <PortfolioImageTile key={image.id} image={image} showProjectLink={false} categoryLabel={category ? categoryLabel(category.id, category.label) : undefined} />; })}
         </section>
         {images.length === 0 && <p className="mt-12 text-bone/60">{t(loadError ? "portfolioUnavailable" : "projectSoon")}</p>}
+        {activeCategory && (
+          <CategorySwitcher
+            activeCategoryId={activeCategory.id}
+            activeCategorySlug={activeCategory.slug}
+            activeCategoryLabel={activeCategory.label}
+            level="project"
+          />
+        )}
       </div>
     </main>
   );
