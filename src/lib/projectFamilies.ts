@@ -9,6 +9,10 @@ const projectSuffixes = new Set([
   "view", "wall", "window", "wrap",
 ]);
 
+const projectPrefixes = new Set([
+  "portfolio", "project", "sample", "work",
+]);
+
 function filenameWords(value: string) {
   return value
     .replace(/\.[a-z0-9]+$/i, "")
@@ -23,6 +27,7 @@ export function normalizeProjectKey(value: string) {
 
 export function projectFamilyFromFilename(filename: string) {
   const words = filenameWords(filename);
+  while (words.length > 1 && projectPrefixes.has(words[0].toLowerCase())) words.shift();
   const firstDescriptor = words.findIndex((word, index) => index > 0 && (projectSuffixes.has(word.toLowerCase()) || /^\d+$/.test(word)));
   const projectWords = words.slice(0, firstDescriptor > 0 ? firstDescriptor : words.length);
   const label = projectWords.map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(" ").trim();

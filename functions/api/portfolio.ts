@@ -1,10 +1,9 @@
 import { json, publicImageUrl, type Env } from "../lib/access";
 import { isHomepageOnlyAsset } from "../lib/homepageAssets";
-import { normalizeProjectKey, projectFamiliesForRows } from "../lib/projects";
+import { canonicalProjectKeyForRows, projectFamiliesForRows, type ProjectFamily } from "../lib/projects";
 import { cleanPortfolioAltText } from "../lib/seo";
 
-function mapRows(rows: any[]) {
-  const families = projectFamiliesForRows(rows);
+function mapRows(rows: any[], families: Map<string, ProjectFamily>) {
   const mapped = rows.map((row) => {
     const project = families.get(String(row.id)) ?? {};
     return {
@@ -39,7 +38,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   const result = await env.DB.prepare("SELECT id, category_id, status, display_rank, is_category_cover, source_filename, alt_text, project_key, project_label, created_at FROM portfolio_images WHERE is_hidden = 0").all<any>();
   const publicRows = result.results.filter((row) => !isHomepageOnlyAsset(row.source_filename));
-  let images = mapRows(publicRows);
+  const families = projectFamiliesForRows(publicRows);
+  let images = mapRows(publicRows, families);
 
   if (coversOnly) {
     const covers = new Map<string, typeof images[number]>();
@@ -54,7 +54,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   if (category) images = images.filter((image) => image.categoryId === category);
   if (status) images = images.filter((image) => image.status === status);
-  if (project) images = images.filter((image) => image.projectKey === normalizeProjectKey(project));
+  if (project) {
+    const canonicalProject = canonicalProjectKeyForRows(publicRows, project, families);
+    images = images.filter((image) => image.projectKey === canonicalProject);
+  }
   images.sort((first, second) => first.rank - second.rank);
   return json({ source: "cloudflare", images });
 };

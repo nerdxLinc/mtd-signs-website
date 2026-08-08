@@ -7,6 +7,10 @@ const projectSuffixes = new Set([
   "view", "wall", "wayfinding", "website", "window", "wrap",
 ]);
 
+const projectPrefixes = new Set([
+  "portfolio", "project", "sample", "work",
+]);
+
 function filenameWords(value: string, includeDirectories = false) {
   const filename = includeDirectories ? value : (value.split(/[\\/]/).pop() ?? value);
   return filename
@@ -31,6 +35,7 @@ function projectFamilyFromWords(words: string[]) {
 
 function familyWordsFromFilename(filename: string) {
   const words = filenameWords(filename);
+  while (words.length > 1 && projectPrefixes.has(words[0].toLowerCase())) words.shift();
   const firstDescriptor = words.findIndex((word, index) => index > 0 && (projectSuffixes.has(word.toLowerCase()) || /^v?\d+$/i.test(word) || /^rev(?:ision)?\d*$/i.test(word)));
   return words.slice(0, firstDescriptor > 0 ? firstDescriptor : words.length);
 }
@@ -84,7 +89,7 @@ export function projectFromRow(row: any) {
   };
 }
 
-type ProjectFamily = { key?: string; label?: string };
+export type ProjectFamily = { key?: string; label?: string };
 
 /**
  * Resolve project families from the whole collection, rather than treating
@@ -94,18 +99,41 @@ type ProjectFamily = { key?: string; label?: string };
 export function projectFamiliesForRows(rows: any[]) {
   const assignments = new Map<string, ProjectFamily>();
   const candidates = rows.map((row) => {
-    const words = familyWordsFromFilename(String(row.source_filename ?? ""));
+    const sourceFilename = String(row.source_filename ?? "");
+    const rawWords = filenameWords(sourceFilename);
+    const derived = projectFamilyFromFilename(sourceFilename);
     const resolved = projectFromRow(row);
-    const storedKey = row.project_key ? String(row.project_key) : undefined;
+    const storedKey = row.project_key ? normalizeProjectKey(String(row.project_key)) : undefined;
     const storedLabel = row.project_label ? String(row.project_label) : undefined;
-    const explicit = Boolean(storedKey && storedLabel && resolved.key === storedKey && resolved.label === storedLabel);
-    return { id: String(row.id), words, key: resolved.key, label: resolved.label, explicit };
+    const isPresentationAsset = rawWords.length > 1 && projectPrefixes.has(rawWords[0].toLowerCase());
+    const storedIsFilenameAlias = Boolean(storedKey && derived
+      && (storedKey.includes(derived.key) || derived.key.includes(storedKey)));
+    const explicit = Boolean(storedKey && resolved.key === storedKey && storedKey !== derived?.key
+      && !storedIsFilenameAlias && !isPresentationAsset);
+    const words = explicit ? filenameWords(storedLabel ?? storedKey ?? "") : familyWordsFromFilename(sourceFilename);
+    return {
+      id: String(row.id),
+      words,
+      key: explicit ? resolved.key : derived?.key ?? resolved.key,
+      label: explicit ? resolved.label : derived?.label ?? resolved.label,
+      explicit,
+    };
   });
   const unique = [...new Map(candidates
     .filter((candidate): candidate is typeof candidate & { key: string; label: string } => Boolean(candidate.key && candidate.label))
     .map((candidate) => [candidate.key, candidate])).values()]
     .sort((first, second) => first.key.length - second.key.length);
   const canonicalByKey = new Map<string, ProjectFamily>();
+
+  const representativeForGroup = (group: typeof candidates) => {
+    const counts = new Map<string, number>();
+    for (const candidate of group) {
+      if (candidate.key) counts.set(candidate.key, (counts.get(candidate.key) ?? 0) + 1);
+    }
+    return [...group].sort((first, second) =>
+      (counts.get(second.key ?? "") ?? 0) - (counts.get(first.key ?? "") ?? 0)
+      || second.words.length - first.words.length)[0];
+  };
 
   // Resolve separator variations and complete contained principal names once
   // per unique project key. This replaces the former row-by-row comparison,
@@ -125,28 +153,74 @@ export function projectFamiliesForRows(rows: any[]) {
   }
 
   // Preserve the established two-word family rule for names such as
-  // Taco Local and Good Earth without treating generic one-word matches as
-  // families. Only prefixes actually shared by more than one distinct key
-  // alter the canonical assignment.
+  // Taco Local and Good Earth. Filename-derived names are the source of truth,
+  // so automatically stored suffix variations cannot split a project family.
   const prefixGroups = new Map<string, typeof candidates>();
   for (const candidate of candidates) {
-    if (candidate.words.length < 2 || !candidate.key) continue;
+    if (candidate.explicit || candidate.words.length < 2 || !candidate.key) continue;
     const prefix = compactFamilyKey(candidate.words.slice(0, 2));
     prefixGroups.set(prefix, [...(prefixGroups.get(prefix) ?? []), candidate]);
   }
-  for (const group of prefixGroups.values()) {
-    const allKeys = new Set(group.map((candidate) => candidate.key).filter(Boolean));
+  for (const [prefix, group] of prefixGroups) {
+    const allKeys = new Set(group.flatMap((candidate) => candidate.key ? [candidate.key] : []));
     if (allKeys.size < 2) continue;
-    const label = labelFromWords(group[0].words.slice(0, 2));
-    const project = { key: normalizeProjectKey(label), label };
-    const inferredKeys = new Set(group.filter((candidate) => !candidate.explicit).map((candidate) => candidate.key).filter(Boolean));
-    for (const key of inferredKeys) canonicalByKey.set(String(key), project);
+    const representative = representativeForGroup(group);
+    const label = representative.label ?? labelFromWords(group[0].words.slice(0, 2));
+    const project = { key: prefix, label };
+    for (const key of allKeys) canonicalByKey.set(key, project);
+  }
+
+  // A distinctive single-word principal may also be the complete customer
+  // name (for example Felland). Only use it when that standalone key actually
+  // exists, preventing arbitrary partial-word matches from merging projects.
+  const principalGroups = new Map<string, typeof candidates>();
+  for (const candidate of candidates) {
+    if (candidate.explicit || candidate.words.length < 1 || !candidate.key) continue;
+    const principal = compactFamilyKey(candidate.words.slice(0, 1));
+    if (principal.length < 5) continue;
+    principalGroups.set(principal, [...(principalGroups.get(principal) ?? []), candidate]);
+  }
+  for (const [principal, group] of principalGroups) {
+    const allKeys = new Set(group.flatMap((candidate) => candidate.key ? [candidate.key] : []));
+    if (allKeys.size < 2 || !group.some((candidate) => candidate.key === principal)) continue;
+    const representative = representativeForGroup(group);
+    const label = representative.label ?? labelFromWords(group[0].words);
+    const project = { key: principal, label };
+    for (const key of allKeys) canonicalByKey.set(key, project);
   }
 
   for (const candidate of candidates) {
-    const project = candidate.explicit ? { key: candidate.key, label: candidate.label } : candidate.key ? canonicalByKey.get(candidate.key) : undefined;
+    const project = candidate.explicit
+      ? { key: candidate.key, label: candidate.label }
+      : candidate.key ? canonicalByKey.get(candidate.key) : undefined;
     assignments.set(candidate.id, project ?? { key: candidate.key, label: candidate.label });
   }
 
   return assignments;
+}
+
+export function canonicalProjectKeyForRows(
+  rows: any[],
+  requestedProjectKey: string,
+  assignments = projectFamiliesForRows(rows),
+) {
+  const requested = normalizeProjectKey(requestedProjectKey);
+  if (!requested) return requested;
+
+  for (const row of rows) {
+    const canonical = assignments.get(String(row.id))?.key;
+    const derived = projectFamilyFromFilename(String(row.source_filename ?? ""));
+    const stored = row.project_key ? normalizeProjectKey(String(row.project_key)) : undefined;
+    const compatibleStored = stored && derived
+      ? stored.includes(derived.key) || derived.key.includes(stored)
+      : Boolean(stored);
+    const aliases = new Set([
+      canonical,
+      derived?.key,
+      ...(compatibleStored ? [stored] : []),
+    ].filter((key): key is string => Boolean(key)));
+    if (aliases.has(requested)) return canonical ?? requested;
+  }
+
+  return requested;
 }

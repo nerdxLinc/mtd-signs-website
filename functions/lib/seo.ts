@@ -1,6 +1,6 @@
 import { getSeoCategory } from "../../src/data/seoCategories";
 import { isHomepageOnlyAsset } from "./homepageAssets";
-import { normalizeProjectKey, projectFamiliesForRows } from "./projects";
+import { canonicalProjectKeyForRows, normalizeProjectKey, projectFamiliesForRows } from "./projects";
 import type { Env } from "./access";
 
 export const SITE_URL = "https://www.mtdsigns.com";
@@ -108,14 +108,15 @@ function labelFromProjectKey(projectKey: string) {
 }
 
 export async function projectSeo(env: Env, requestedProjectKey: string): Promise<RouteSeo | null> {
-  const requestedKey = normalizeProjectKey(requestedProjectKey);
-  if (!requestedKey) return null;
+  const normalizedRequestedKey = normalizeProjectKey(requestedProjectKey);
+  if (!normalizedRequestedKey) return null;
 
   const result = await env.DB.prepare(
     "SELECT id, category_id, source_filename, project_key, project_label FROM portfolio_images WHERE is_hidden = 0",
   ).all<ProjectRow>();
   const rows = result.results.filter((row) => !isHomepageOnlyAsset(row.source_filename));
   const families = projectFamiliesForRows(rows);
+  const requestedKey = canonicalProjectKeyForRows(rows, normalizedRequestedKey, families);
   const matchingRows = rows.filter((row) => families.get(String(row.id))?.key === requestedKey);
   if (matchingRows.length === 0) return null;
 
