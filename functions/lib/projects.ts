@@ -11,6 +11,17 @@ const projectPrefixes = new Set([
   "portfolio", "project", "sample", "work",
 ]);
 
+const ambiguousTwoWordPrefixes = new Set([
+  // These are locations or generic phrases, not complete customer names.
+  // Blindly collapsing them merged separate Van Buren County departments
+  // and would merge unrelated City of ... projects as the archive grows.
+  "cityof", "vanburen",
+]);
+
+function isNumberedDescriptor(word: string) {
+  return /^(?:car|f|k|ram|suv|trailer|truck|van|vehicle)\d+$/i.test(word);
+}
+
 function filenameWords(value: string, includeDirectories = false) {
   const filename = includeDirectories ? value : (value.split(/[\\/]/).pop() ?? value);
   return filename
@@ -36,7 +47,12 @@ function projectFamilyFromWords(words: string[]) {
 function familyWordsFromFilename(filename: string) {
   const words = filenameWords(filename);
   while (words.length > 1 && projectPrefixes.has(words[0].toLowerCase())) words.shift();
-  const firstDescriptor = words.findIndex((word, index) => index > 0 && (projectSuffixes.has(word.toLowerCase()) || /^v?\d+$/i.test(word) || /^rev(?:ision)?\d*$/i.test(word)));
+  const firstDescriptor = words.findIndex((word, index) => index > 0 && (
+    projectSuffixes.has(word.toLowerCase())
+    || isNumberedDescriptor(word)
+    || /^v?\d+$/i.test(word)
+    || /^rev(?:ision)?\d*$/i.test(word)
+  ));
   return words.slice(0, firstDescriptor > 0 ? firstDescriptor : words.length);
 }
 
@@ -162,6 +178,7 @@ export function projectFamiliesForRows(rows: any[]) {
     prefixGroups.set(prefix, [...(prefixGroups.get(prefix) ?? []), candidate]);
   }
   for (const [prefix, group] of prefixGroups) {
+    if (ambiguousTwoWordPrefixes.has(prefix)) continue;
     const allKeys = new Set(group.flatMap((candidate) => candidate.key ? [candidate.key] : []));
     if (allKeys.size < 2) continue;
     const representative = representativeForGroup(group);

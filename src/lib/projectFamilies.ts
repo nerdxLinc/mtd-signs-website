@@ -13,6 +13,14 @@ const projectPrefixes = new Set([
   "portfolio", "project", "sample", "work",
 ]);
 
+function isProjectDescriptor(word: string) {
+  const normalized = word.toLowerCase();
+  return projectSuffixes.has(normalized)
+    || /^(?:car|f|k|ram|suv|trailer|truck|van|vehicle)\d+$/i.test(word)
+    || /^v?\d+$/i.test(word)
+    || /^rev(?:ision)?\d*$/i.test(word);
+}
+
 function filenameWords(value: string) {
   return value
     .replace(/\.[a-z0-9]+$/i, "")
@@ -28,7 +36,7 @@ export function normalizeProjectKey(value: string) {
 export function projectFamilyFromFilename(filename: string) {
   const words = filenameWords(filename);
   while (words.length > 1 && projectPrefixes.has(words[0].toLowerCase())) words.shift();
-  const firstDescriptor = words.findIndex((word, index) => index > 0 && (projectSuffixes.has(word.toLowerCase()) || /^\d+$/.test(word)));
+  const firstDescriptor = words.findIndex((word, index) => index > 0 && isProjectDescriptor(word));
   const projectWords = words.slice(0, firstDescriptor > 0 ? firstDescriptor : words.length);
   const label = projectWords.map((word) => `${word.charAt(0).toUpperCase()}${word.slice(1)}`).join(" ").trim();
   const key = normalizeProjectKey(label);
