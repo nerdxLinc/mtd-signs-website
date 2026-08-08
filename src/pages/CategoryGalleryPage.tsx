@@ -29,6 +29,7 @@ export default function CategoryGalleryPage({ category }: CategoryGalleryPagePro
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>
 
+        <CategorySwitcher activeCategoryId={category.id} activeCategorySlug={category.slug} activeCategoryLabel={label} level="featured" />
         <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${t("featured")} ${label} ${t("featuredImages")}`}>
           {images.map((image) => <PortfolioImageTile key={image.id} image={image} />)}
         </section>

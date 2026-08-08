@@ -29,6 +29,7 @@ export default function CategoryArchivePage({ category }: CategoryArchivePagePro
           <p className="mt-6 max-w-2xl text-base leading-relaxed text-bone/70 sm:text-lg">{description}</p>
           {usingDevelopmentFallback && <p className="mt-5 max-w-xl text-xs leading-relaxed text-bone/45">{t("developmentPreview")}</p>}
         </header>
+        <CategorySwitcher activeCategoryId={category.id} activeCategorySlug={category.slug} activeCategoryLabel={label} level="archive" />
         <section className="mt-12 grid grid-cols-1 gap-4 sm:mt-16 sm:grid-cols-2 lg:grid-cols-3" aria-label={`${title} ${t("archiveImages")}`}>
           {images.map((image) => <PortfolioImageTile key={image.id} image={image} />)}
         </section>
