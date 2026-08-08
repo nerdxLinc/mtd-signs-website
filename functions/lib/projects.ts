@@ -222,5 +222,16 @@ export function canonicalProjectKeyForRows(
     if (aliases.has(requested)) return canonical ?? requested;
   }
 
+  // Older links may contain a previously stored shortened or extended form
+  // that is no longer present on an individual row. Resolve it against the
+  // canonical principal name without allowing short, generic prefixes.
+  for (const family of assignments.values()) {
+    const canonical = family.key;
+    if (!canonical || canonical.length < 5 || requested.length < 5) continue;
+    if (requested.startsWith(canonical) || canonical.startsWith(requested)) {
+      return canonical;
+    }
+  }
+
   return requested;
 }
