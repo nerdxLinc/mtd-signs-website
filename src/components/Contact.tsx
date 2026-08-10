@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Phone, Mail, MapPin, ArrowRight } from "lucide-react";
+import { Phone, Mail, MapPin, CalendarClock, ArrowRight } from "lucide-react";
 import { useTranslation } from "../lib/i18n";
 
 export default function Contact() {
@@ -76,6 +76,14 @@ export default function Contact() {
                 166 Hwy 310
                 <br />
                 Enola, AR 72047
+              </span>
+            </li>
+            <li className="flex items-center gap-3">
+              <CalendarClock size={18} className="text-blue shrink-0" />
+              <span>
+                {t("businessHours")}
+                <br />
+                {t("visitsByAppointment")}
               </span>
             </li>
           </ul>

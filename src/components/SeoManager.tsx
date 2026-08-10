@@ -82,8 +82,8 @@ export default function SeoManager({ path, notFound = false }: { path: string; n
     const category = workPath ? getWorkCategory(workPath.replace(/\/archive$/, "")) : undefined;
     const projectKey = normalized.startsWith("/projects/") ? normalized.replace("/projects/", "") : "";
     const baseDescription = language === "es"
-      ? "Letreros comerciales, rotulación de vehículos, gráficos para flotillas y diseño de identidad de MTD Signs & Graphics en Arkansas."
-      : "Commercial signs, vehicle wraps, fleet graphics, and identity design by MTD Signs & Graphics in Arkansas.";
+      ? "Rotulación vehicular premiada, gráficos para flotillas, letreros comerciales y diseño de logotipos para el centro de Arkansas y empresas de todo el estado."
+      : "Award-winning vehicle wraps, fleet graphics, commercial signs, and logo design serving Central Arkansas and businesses statewide.";
 
     if (notFound) {
       return {
@@ -158,8 +158,8 @@ export default function SeoManager({ path, notFound = false }: { path: string; n
     }
     return {
       title: language === "es"
-        ? "MTD Signs & Graphics | Letreros, Rotulación y Diseño"
-        : "MTD Signs & Graphics | Signs, Wraps & Design",
+        ? "MTD Signs & Graphics | Rotulación y Diseño Premiados"
+        : "MTD Signs & Graphics | Award-Winning Wraps & Design",
       description: baseDescription,
       canonical: `${SITE_URL}/`,
       robots: "index, follow",

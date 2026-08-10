@@ -10,12 +10,12 @@ export default function FounderStatement() {
       <div className="grid lg:grid-cols-2">
         {/* Text side */}
         <div className="relative px-5 sm:px-8 lg:pl-16 lg:pr-12 py-20 lg:py-28 overflow-hidden">
-          {/* faint oversized year, cropped by frame */}
+          {/* faint oversized design cue, cropped by frame */}
           <span
             aria-hidden
             className="pointer-events-none select-none absolute -right-4 top-1/2 -translate-y-1/2 font-display font-bold text-[13rem] leading-none text-bone/[0.04]"
           >
-            1994
+            DESIGN
           </span>
 
           <motion.div
