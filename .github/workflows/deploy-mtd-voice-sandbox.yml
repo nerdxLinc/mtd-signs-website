@@ -1,0 +1,49 @@
+# Public test endpoint with ONLY the signed Twilio voice webhook. No MTD admin.
+# Runs exclusively from the isolated assistant branch; the main site is untouched.
+name: Deploy isolated MTD phone sandbox
+
+on:
+  push:
+    branches:
+      - feature/mtd-ai-assistant-v1
+    paths:
+      - .github/workflows/deploy-mtd-voice-sandbox.yml
+      - scripts/build-voice-sandbox.mjs
+      - scripts/configure-voice-sandbox.mjs
+      - scripts/test-voice-sandbox.mjs
+      - functions/api/voice.ts
+      - functions/lib/voice-receptionist.ts
+      - functions/lib/access.ts
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mtd-isolated-phone-webhook-test
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.repository == 'nerdxLinc/mtd-signs-website' && github.ref == 'refs/heads/feature/mtd-ai-assistant-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test isolation and deployment guards
+        run: node scripts/test-voice-sandbox.mjs
+      - name: Prepare minimal standalone voice endpoint
+        run: node scripts/build-voice-sandbox.mjs
+      - name: Create isolated project with Preview D1 binding
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: c6920b6bea2391db4a4b10c0a2f97f45
+        run: node scripts/configure-voice-sandbox.mjs
+      - name: Deploy voice sandbox without private MTD routes
+        working-directory: .voice-sandbox
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: c6920b6bea2391db4a4b10c0a2f97f45
+        run: npx --yes wrangler@4 pages deploy dist --project-name mtd-voice-sandbox --branch main
