@@ -36,6 +36,8 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
 
 ## Proposed missed-call voice receptionist (feature branch only)
 
+Preview infrastructure update (2026-11-24): the isolated `mtd-signs-preview-db` was created, assistant and phone inquiry migrations applied, and the Preview `DB` binding verified by the GitHub Actions setup workflow. Production configuration remained unchanged. The branch must still be redeployed, and Twilio credentials/webhooks configured and tested before any Verizon forwarding change.
+
 **Not live:** No Twilio account, purchased number, Cloudflare secrets, or Verizon forwarding change has been configured by these source changes. Do not activate production forwarding until a call-through test succeeds.
 
 1. Barry has confirmed the existing business line is on **Verizon** and he wants the assistant to answer **only after he doesn't answer**. He does **not** want a paid Verizon spam-filter subscription or any other Verizon add-on. Verizon's free filtering may be used if already included, but the project must not require it.
