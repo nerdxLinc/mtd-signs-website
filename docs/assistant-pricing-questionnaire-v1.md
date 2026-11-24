@@ -67,6 +67,8 @@ Barry would like an AI telephone receptionist that handles incoming business cal
 
 **Verified routing mechanism:** Verizon supports conditional call forwarding for unanswered/busy calls (`*71` plus the destination number). That would route missed calls to a separate voice-service number instead of Verizon voicemail. **This is a requested future feature, not yet implemented or enabled.** No forwarding settings should be changed until Barry explicitly approves the target and voicemail behavior. A live transfer back to the same Verizon number may encounter the forwarding rule again, so prioritize a text alert and callback until a different reachable transfer destination is confirmed.
 
+**Confirmed cost boundary:** Barry does not want Verizon Call Filter Plus or any other paid Verizon spam-blocking add-on. Free Verizon filtering is optional if already available. The proposed receptionist must not be represented as preventing the phone's initial ring. Obvious vendor solicitations, collection-related calls, and recognizable robocalls may be flagged without a lead alert, but retain a private review record rather than silently erasing them.
+
 Questions to resolve before implementing any call routing, phone-number changes, or outbound SMS:
 
 1. Which public MTD number currently rings Barry's Verizon phone? (Do not place personal routing numbers in this public repository.)

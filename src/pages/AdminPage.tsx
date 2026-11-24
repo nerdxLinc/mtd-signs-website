@@ -26,6 +26,18 @@ type ContactInquiry = {
   created_at: string;
 };
 
+type PhoneInquiry = {
+  call_sid: string;
+  caller_number: string | null;
+  customer_name: string | null;
+  project_details: string | null;
+  intent: "project" | "solicitation" | "collection" | "robocall";
+  status: "new" | "read" | "archived" | "solicitation" | "collection" | "robocall";
+  alert_sent: number;
+  alert_error: string | null;
+  created_at: string;
+};
+
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 const MAX_SOURCE_RECORD_BYTES = 512 * 1024;
 const MAX_BULK_IMAGES = 100;
@@ -136,6 +148,7 @@ export default function AdminPage() {
   const [images, setImages] = useState<PortfolioImage[]>(developmentPortfolioImages);
   const [testimonials, setTestimonials] = useState<TestimonialRecord[]>([]);
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
+  const [phoneInquiries, setPhoneInquiries] = useState<PhoneInquiry[]>([]);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"all" | PortfolioStatus>("all");
   const [remoteReady, setRemoteReady] = useState(false);
@@ -165,10 +178,12 @@ export default function AdminPage() {
       fetch("/api/admin/portfolio").then((response) => response.ok ? response.json() : Promise.reject()),
       fetch("/api/admin/testimonials").then((response) => response.ok ? response.json() : Promise.reject()),
       fetch("/api/admin/contact-submissions").then((response) => response.ok ? response.json() : Promise.reject()),
-    ]).then(([portfolio, testimonialResponse, inquiryResponse]) => {
+      fetch("/api/admin/phone-inquiries").then((response) => response.ok ? response.json() : { inquiries: [] }).catch(() => ({ inquiries: [] })),
+    ]).then(([portfolio, testimonialResponse, inquiryResponse, phoneResponse]) => {
       setImages(portfolio.images);
       setTestimonials(testimonialResponse.testimonials);
       setInquiries(inquiryResponse.inquiries);
+      setPhoneInquiries(phoneResponse.inquiries);
       setRemoteReady(true);
       return fetch("/api/admin/duplicate-reviews").then((response) => response.ok ? response.json() : Promise.reject());
     }).then((response) => setDuplicateReviews(response.reviews)).catch(() => setRemoteReady(false));
@@ -227,6 +242,21 @@ export default function AdminPage() {
       setNotice(status === "archived" ? "Inquiry archived." : "Inquiry status saved.");
     } catch (error) {
       setNotice(error instanceof Error ? error.message : "This inquiry could not be updated.");
+    }
+  }
+
+  async function setPhoneInquiryStatus(inquiry: PhoneInquiry, status: "new" | "read" | "archived") {
+    try {
+      const response = await fetch(`/api/admin/phone-inquiries?id=${encodeURIComponent(inquiry.call_sid)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw new Error("Phone inquiry status could not be updated.");
+      setPhoneInquiries((current) => current.map((entry) => entry.call_sid === inquiry.call_sid ? { ...entry, status } : entry));
+      setNotice("Phone inquiry updated.");
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Phone inquiry could not be updated.");
     }
   }
 
@@ -681,7 +711,30 @@ export default function AdminPage() {
 
         {tab === "inquiries" && (
           <section className="mt-8 max-w-4xl">
-            <h2 className="font-display text-3xl font-semibold uppercase text-bone">Project Inquiries</h2>
+            <h2 className="font-display text-3xl font-semibold uppercase text-bone">Missed-Call Inquiries</h2>
+            <p className="mt-3 text-bone/65">Calls screened by the automated receptionist. New callback requests remain here even when the text alert fails.</p>
+            <div className="mt-7 space-y-4">
+              {phoneInquiries.length === 0 && <p className="border border-line p-5 text-sm text-bone/60">No missed-call inquiries have been recorded yet.</p>}
+              {phoneInquiries.map((inquiry) => (
+                <article key={inquiry.call_sid} className={`border bg-charcoal2 p-5 ${inquiry.status === "new" ? "border-orange/60" : "border-line"}`}>
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <p className="font-body text-lg font-bold text-bone">{inquiry.customer_name || "Name not provided"}</p>
+                      <p className="mt-1 text-sm text-bone/60">{new Date(`${inquiry.created_at.replace(" ", "T")}Z`).toLocaleString()} · {inquiry.intent === "solicitation" ? "Likely sales solicitation" : inquiry.intent === "collection" ? "Possible collection call" : inquiry.intent === "robocall" ? "Likely robocall" : "Potential customer"} · {inquiry.status} · {inquiry.alert_sent === 1 ? "Text sent" : inquiry.alert_sent === -1 ? "Text failed — check here" : "No text sent"}</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {inquiry.status !== "read" && <button type="button" onClick={() => void setPhoneInquiryStatus(inquiry, "read")} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Mark Read</button>}
+                      {inquiry.status !== "archived" && <button type="button" onClick={() => void setPhoneInquiryStatus(inquiry, "archived")} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Archive</button>}
+                      {inquiry.status === "archived" && <button type="button" onClick={() => void setPhoneInquiryStatus(inquiry, "new")} className="min-h-10 border border-line px-3 text-xs font-bold uppercase text-bone hover:border-orange">Restore</button>}
+                    </div>
+                  </div>
+                  {inquiry.caller_number && <a href={`tel:${inquiry.caller_number.replace(/[^\d+]/g, "")}`} className="mt-3 inline-block text-sm font-bold text-orange hover:text-bone">{inquiry.caller_number}</a>}
+                  {inquiry.project_details && <p className="mt-4 whitespace-pre-wrap border-t border-line pt-4 text-bone/80">{inquiry.project_details}</p>}
+                  {inquiry.alert_sent === -1 && inquiry.alert_error && <p className="mt-3 text-xs text-orange">Alert error: {inquiry.alert_error}</p>}
+                </article>
+              ))}
+            </div>
+            <h2 className="mt-12 font-display text-3xl font-semibold uppercase text-bone">Website Project Inquiries</h2>
             <p className="mt-3 text-bone/65">Every successful public contact-form submission is saved here before the visitor sees a confirmation.</p>
             <div className="mt-7 space-y-4">
               {inquiries.length === 0 && <p className="border border-line p-5 text-sm text-bone/60">No project inquiries have been received yet.</p>}
