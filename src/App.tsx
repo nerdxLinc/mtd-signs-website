@@ -19,6 +19,7 @@ import LanguageToggle from "./components/LanguageToggle";
 import { useTranslation } from "./lib/i18n";
 import SeoManager from "./components/SeoManager";
 import NotFoundPage from "./pages/NotFoundPage";
+import ChatAssistant from "./components/ChatAssistant";
 
 function PublicPage({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -41,6 +42,7 @@ function PublicPage({ children }: { children: React.ReactNode }) {
       <LanguageToggle />
       <div className="public-page-scroll">{children}</div>
       <MobileContactBar />
+      <ChatAssistant />
     </div>
   );
 }

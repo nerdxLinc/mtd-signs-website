@@ -54,6 +54,12 @@ run and flag anything that doesn't compile — happy to fix immediately.
 - **Problem-solving story section** — three-photo detail strip.
 - **Contact** — public form backed by a Pages Function and D1. Every
   accepted inquiry is saved before the site attempts an email alert.
+- **Proposed assistant (feature branch)** — optional website chat connected to
+  Workers AI, with explicit no-quote safeguards and a human-reviewed inquiry
+  handoff to the existing `/api/contact` pipeline. Start with
+  [`docs/assistant-pricing-questionnaire-v1.md`](docs/assistant-pricing-questionnaire-v1.md)
+  before approving any service or pricing rules. Deployment setup is in
+  `CLOUDFLARE_SETUP.md`; the `AI` binding and rate-limit migration are required.
 
 ## Known gaps / things to swap before launch
 

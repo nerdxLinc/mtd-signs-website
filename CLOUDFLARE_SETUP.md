@@ -14,6 +14,7 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0005_contact_submissions.sql
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0006_hide_homepage_only_assets.sql
    npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0007_hide_homepage_process_assets.sql
+   npx wrangler d1 execute YOUR_D1_DATABASE_NAME --remote --file=migrations/0008_assistant_rate_limits.sql
    ```
 4. Deploy the site as a Cloudflare Pages project using `npm run build` and `dist` as the build output. The included `_redirects` file keeps direct public routes working.
 5. Add the two storage bindings to Pages Functions exactly as named: `DB` for D1 and `PORTFOLIO_BUCKET` for R2. Do not use placeholder values in a deployment.
@@ -21,6 +22,17 @@ The public site uses Cloudflare Pages. The private portfolio manager uses Cloudf
 7. In Cloudflare Zero Trust, create a Cloudflare Access application for `https://YOUR-DOMAIN/admin*` and a second one for `https://YOUR-DOMAIN/api/admin/*`. Add only the people or email domains that should manage MTD's portfolio.
 8. The middleware validates Cloudflare Access's signed `Cf-Access-Jwt-Assertion`, extracts the authenticated email, and passes that verified identity to every admin API endpoint. The current Access team domain and application audience are built in; they can be overridden with `CF_ACCESS_TEAM_DOMAIN` and `CF_ACCESS_AUD` if the Access application is ever recreated. Hiding the admin link alone is never used as protection.
 9. Visit `/admin` after Access login. Upload image files or the Claude ZIP packages. ZIP images are suggested a category, imported as hidden Archive records, checked for exact and possible duplicates, and then reviewed before they are visible publicly.
+
+## Proposed website assistant (feature branch only until approved)
+
+- **Do not merge this feature branch into `main` until Barry has tested and approved the assistant.** Its project pricing knowledge is intentionally absent.
+- Review `docs/assistant-pricing-questionnaire-v1.md` together, then update the server-side approved knowledge in `functions/lib/assistant-policy.ts`. Never place private supplier costs or secrets in client-side React files.
+- Apply `migrations/0008_assistant_rate_limits.sql` to the correct **preview database** before testing; apply it to production only as part of the authorized go-live. The endpoint refuses AI requests if its rate-limit table is missing.
+- In Cloudflare **Pages > your project > Settings > Bindings**, add a Workers AI binding named **`AI`**, in the environment you are testing. This is a Pages binding configured in the Cloudflare dashboard; it doesn't require an OpenAI API key.
+- Review Workers AI usage and billing limits. If available, use Cloudflare AI Gateway limits as a second layer of spend protection. The `/api/chat` endpoint also enforces a small per-visitor hourly limit in D1; it does not make cost risk zero.
+- Chat messages are sent to Cloudflare Workers AI for generation, and are **not** saved as customer records automatically. Only when a visitor chooses **Send inquiry**, confirms their information, and submits the form are customer-entered project details saved through the existing `/api/contact` route. The chat extracts only the visitor's own messages, not model replies, into the editable inquiry form.
+- The chatbot does not quote prices, promise schedules, or book appointments in this initial version. A human needs to review and approve service/pricing decisions before broader functionality is introduced.
+- Test mobile layout, Spanish behavior, price-refusal examples, spam safeguards, and email/inbox delivery on a preview deployment before publishing it on the live site.
 
 ## Browser ZIP importer
 
