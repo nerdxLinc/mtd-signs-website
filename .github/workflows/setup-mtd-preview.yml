@@ -1,4 +1,5 @@
 # Runs only from the isolated assistant branch, never from main or a pull request.
+# Recheck preview setup after the repository secret was added.
 # Put a short-lived Cloudflare token in Settings > Secrets and variables > Actions
 # as CLOUDFLARE_API_TOKEN. Do not add credentials to source or chat messages.
 name: Set up MTD test environment
