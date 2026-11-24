@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { execFileSync } from "node:child_process";
 import { configureSandbox } from "./configure-voice-sandbox.mjs";
+import { configureVoiceSecret } from "./configure-voice-secret.mjs";
 
 const accountId = "a".repeat(32);
 const dbId = "b".repeat(32);
@@ -44,6 +45,32 @@ for (const test of [
   else await configureSandbox({ token: "fake", accountId, fetchImpl });
   assert(!calls.some(c => c.path === "/pages/projects/mtd-signs-website" && c.method !== "GET"));
   if (test.expected) assert.deepEqual(calls.filter(c => c.method === "POST" || c.method === "PATCH").map(c => c.method), test.expected);
+}
+
+// Secret handoff updates only this separate project, and never logs or stores
+// a token in the repository. A missing GitHub secret is an intentional no-op.
+{
+  const calls = [];
+  const project = { name: "mtd-voice-sandbox", deployment_configs: {
+    production: { d1_databases: { DB: { id: dbId } }, env_vars: {} },
+  } };
+  const fetchImpl = async (url, args) => {
+    assert(url.endsWith("/pages/projects/mtd-voice-sandbox"));
+    calls.push(args.method);
+    if (args.method === "PATCH") {
+      project.deployment_configs.production.env_vars = {
+        TWILIO_AUTH_TOKEN: { type: "secret_text", value: "redacted" },
+      };
+      assert.equal(JSON.parse(args.body).deployment_configs.production.env_vars.TWILIO_AUTH_TOKEN.type, "secret_text");
+    }
+    return success(project);
+  };
+  assert.deepEqual(await configureVoiceSecret({ cloudflareToken: "cf", accountId, twilioToken: "", fetchImpl }), { configured: false });
+  assert.deepEqual(calls, []);
+  await assert.rejects(configureVoiceSecret({ cloudflareToken: "cf", accountId, twilioToken: "bad", fetchImpl }), /format/);
+  assert.deepEqual(calls, []);
+  assert.deepEqual(await configureVoiceSecret({ cloudflareToken: "cf", accountId, twilioToken: "f".repeat(32), fetchImpl }), { configured: true });
+  assert.deepEqual(calls, ["GET", "PATCH", "GET"]);
 }
 
 // Ensure the packaged project has exactly one API route and no admin files.
