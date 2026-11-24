@@ -30,11 +30,13 @@ export async function configureSandbox({ token, accountId, fetchImpl = fetch }) 
 
   const path = "/pages/projects/mtd-voice-sandbox";
   let project = await request(path, "GET", undefined, true);
+  let justCreated = false;
   if (!project) {
     project = await request("/pages/projects", "POST", {
       name: "mtd-voice-sandbox",
       production_branch: "main",
     });
+    justCreated = true;
     console.log("Created separate mtd-voice-sandbox Pages project.");
   }
   if (project.name !== "mtd-voice-sandbox" || project.production_branch !== "main" || project.source?.type) {
@@ -42,9 +44,22 @@ export async function configureSandbox({ token, accountId, fetchImpl = fetch }) 
   }
   const currentDb = project.deployment_configs?.production?.d1_databases?.DB?.id;
   if (currentDb && currentDb !== dbId) throw new Error("Sandbox is bound to unexpected D1; refusing replacement.");
-  if (!currentDb) await request(path, "PATCH", {
-    deployment_configs: { production: { d1_databases: { DB: { id: dbId } } } },
-  });
+  if (!currentDb) {
+    // Brand-new Pages projects may take several seconds to become addressable
+    // on PATCH after POST succeeds. Never retry a mutation except a verified
+    // idempotent binding to this one exact sandbox database/project.
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        await request(path, "PATCH", {
+          deployment_configs: { production: { d1_databases: { DB: { id: dbId } } } },
+        });
+        break;
+      } catch (error) {
+        if (!justCreated || attempt === 7 || !String(error?.message).includes("(404)")) throw error;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
   const verified = await request(path);
   if (verified.deployment_configs?.production?.d1_databases?.DB?.id !== dbId) {
     throw new Error("Sandbox D1 binding did not persist.");
