@@ -63,13 +63,15 @@ The assistant's **primary job is to refer interested prospects to Barry**. It sh
 
 ### Requested next phase — telephone receptionist and text alerts
 
-Barry would like an AI telephone receptionist that answers incoming business calls, handles a few basic service questions, and gives the caller an easy way to speak directly to Barry. It should transfer live calls to his phone when he is available. If he cannot answer, it should collect a name, callback number, and one-line project summary, and alert him via text message. **This is a requested future feature, not yet implemented or enabled.**
+Barry would like an AI telephone receptionist that handles incoming business calls **only when he does not answer his Verizon phone**. It should answer a few basic service questions, offer to get Barry involved, collect a name, callback number and one-line project summary, and alert him via text message. Barry also receives many unsolicited sales pitches and suspicious inquiries: the assistant should avoid treating obvious vendor pitches or scam messages as customer leads. Filtering will be imperfect and should not permanently discard borderline inquiries.
+
+**Verified routing mechanism:** Verizon supports conditional call forwarding for unanswered/busy calls (`*71` plus the destination number). That would route missed calls to a separate voice-service number instead of Verizon voicemail. **This is a requested future feature, not yet implemented or enabled.** No forwarding settings should be changed until Barry explicitly approves the target and voicemail behavior. A live transfer back to the same Verizon number may encounter the forwarding rule again, so prioritize a text alert and callback until a different reachable transfer destination is confirmed.
 
 Questions to resolve before implementing any call routing, phone-number changes, or outbound SMS:
 
-1. Which public business number should callers dial, and who provides that number today?
-2. Should the assistant answer all calls, only missed calls, or only after business hours?
-3. Which destination number should be rung for live transfers? Which number should receive text alerts? (Keep personal routing numbers in private deployment secrets, not this repo.)
+1. Which public MTD number currently rings Barry's Verizon phone? (Do not place personal routing numbers in this public repository.)
+2. **Confirmed:** Answer only when Barry does not answer. Verify what he wants to happen if the phone is busy, as Verizon combines unanswered/busy call forwarding.
+3. Which distinct number, if any, should be rung for live transfers? Which number should receive text alerts? (Keep personal routing numbers in private deployment secrets, not this repo.)
 4. Should the caller be offered transfer immediately, or after one simple intake question? How long should the system try before offering callback?
 5. What should happen when transfer fails, the assistant or provider is unavailable, or the caller refuses to speak with AI?
 6. What recording/transcription disclosure and retention policy should apply, if any? Start without call recording unless explicitly approved.
