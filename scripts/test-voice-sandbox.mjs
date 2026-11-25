@@ -61,7 +61,9 @@ for (const test of [
       project.deployment_configs.production.env_vars = {
         TWILIO_AUTH_TOKEN: { type: "secret_text", value: "redacted" },
       };
-      assert.equal(JSON.parse(args.body).deployment_configs.production.env_vars.TWILIO_AUTH_TOKEN.type, "secret_text");
+      const production = JSON.parse(args.body).deployment_configs.production;
+      assert.equal(production.env_vars.TWILIO_AUTH_TOKEN.type, "secret_text");
+      assert.equal(production.d1_databases.DB.id, dbId, "Secret update must preserve the D1 binding");
     }
     return success(project);
   };
