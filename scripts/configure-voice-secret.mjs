@@ -28,13 +28,18 @@ export async function configureVoiceSecret({ cloudflareToken, accountId, twilioT
     throw new Error("Isolated phone project or Preview D1 binding missing; refusing secret update.");
   }
   const db = before.deployment_configs.production.d1_databases.DB.id;
+  // Supply the existing D1 binding with the secret in the same update. Some
+  // Pages API updates replace nested production settings rather than merge them.
   await request("PATCH", { deployment_configs: { production: {
+    d1_databases: { DB: { id: db } },
     env_vars: { TWILIO_AUTH_TOKEN: { type: "secret_text", value: twilioToken } },
   } } });
   const after = await request();
-  if (after.deployment_configs?.production?.d1_databases?.DB?.id !== db ||
-      after.deployment_configs?.production?.env_vars?.TWILIO_AUTH_TOKEN?.type !== "secret_text") {
-    throw new Error("Sandbox Twilio secret or D1 binding verification failed.");
+  if (after.deployment_configs?.production?.d1_databases?.DB?.id !== db) {
+    throw new Error("Sandbox D1 binding did not persist after adding the secret.");
+  }
+  if (after.deployment_configs?.production?.env_vars?.TWILIO_AUTH_TOKEN?.type !== "secret_text") {
+    throw new Error("Sandbox secret was not confirmed as encrypted by Cloudflare.");
   }
   console.log("Verified encrypted Twilio authentication secret in isolated phone sandbox; D1 binding preserved.");
   return { configured: true };
