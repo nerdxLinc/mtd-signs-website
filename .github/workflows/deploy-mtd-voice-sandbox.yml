@@ -12,6 +12,8 @@ on:
       - scripts/configure-voice-sandbox.mjs
       - scripts/test-voice-sandbox.mjs
       - scripts/configure-voice-secret.mjs
+      - scripts/test-deployed-voice-webhook.mjs
+      - scripts/inspect-twilio-numbers.mjs
       - functions/api/voice.ts
       - functions/lib/voice-receptionist.ts
       - functions/lib/access.ts
@@ -54,3 +56,17 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: c6920b6bea2391db4a4b10c0a2f97f45
         run: npx --yes wrangler@4 pages deploy dist --project-name mtd-voice-sandbox --branch main
+      - name: Verify signed public phone endpoint without creating a lead
+        env:
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+        run: node scripts/test-deployed-voice-webhook.mjs
+      - name: Inspect Twilio trial number inventory if account ID is securely configured
+        env:
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+        run: |
+          if [ -n "$TWILIO_ACCOUNT_SID" ]; then
+            node scripts/inspect-twilio-numbers.mjs
+          else
+            echo "Twilio number inspection deferred: TWILIO_ACCOUNT_SID GitHub secret is not configured."
+          fi
