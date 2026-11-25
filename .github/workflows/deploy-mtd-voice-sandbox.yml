@@ -14,6 +14,8 @@ on:
       - scripts/configure-voice-secret.mjs
       - scripts/test-deployed-voice-webhook.mjs
       - scripts/inspect-twilio-numbers.mjs
+      - scripts/connect-twilio-voice.mjs
+      - scripts/test-connect-twilio-voice.mjs
       - functions/api/voice.ts
       - functions/lib/voice-receptionist.ts
       - functions/lib/access.ts
@@ -37,6 +39,8 @@ jobs:
           node-version: '22'
       - name: Test isolation and deployment guards
         run: node scripts/test-voice-sandbox.mjs
+      - name: Test guarded Twilio trial number routing
+        run: node scripts/test-connect-twilio-voice.mjs
       - name: Prepare minimal standalone voice endpoint
         run: node scripts/build-voice-sandbox.mjs
       - name: Create isolated project with Preview D1 binding
@@ -69,4 +73,14 @@ jobs:
             node scripts/inspect-twilio-numbers.mjs
           else
             echo "Twilio number inspection deferred: TWILIO_ACCOUNT_SID GitHub secret is not configured."
+          fi
+      - name: Connect one unused/default trial number only after webhook test passes
+        env:
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+        run: |
+          if [ -n "$TWILIO_ACCOUNT_SID" ]; then
+            node scripts/connect-twilio-voice.mjs
+          else
+            echo "Twilio call routing deferred: TWILIO_ACCOUNT_SID GitHub secret is not configured."
           fi
